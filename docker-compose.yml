@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # Spring Boot Application
   backend:
-    image: ${IMAGE_NAME}
+    image: ${IMAGE_NAME:?IMAGE_NAME is required}
     container_name: storead-backend
     environment:
       # Spring Profile
