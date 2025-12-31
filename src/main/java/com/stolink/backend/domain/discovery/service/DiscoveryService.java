@@ -3,7 +3,6 @@ package com.stolink.backend.domain.discovery.service;
 import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.discovery.dto.*;
-import com.stolink.backend.domain.like.repository.ChapterLikeRepository;
 import com.stolink.backend.domain.work.entity.Genre;
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
@@ -25,7 +24,6 @@ public class DiscoveryService {
 
     private final WorkRepository workRepository;
     private final ChapterRepository chapterRepository;
-    private final ChapterLikeRepository chapterLikeRepository;
 
     public Page<DiscoveryWorkResponse> getWorks(Pageable pageable) {
         return workRepository.findAll(pageable)
@@ -63,9 +61,9 @@ public class DiscoveryService {
         // 조회수 증가
         chapter.incrementViewCount();
 
-        // 좋아요 정보
-        long likeCount = chapterLikeRepository.countByChapterId(chapterId);
-        boolean likedByMe = userId != null && chapterLikeRepository.existsByChapterIdAndUserId(chapterId, userId);
+        // 좋아요 정보 (ChapterLike 기능 제거됨 - 추후 다시 구현 필요시 추가)
+        long likeCount = 0L;
+        boolean likedByMe = false;
 
         // 이전/다음 챕터
         UUID workId = chapter.getWork().getId();
@@ -85,3 +83,4 @@ public class DiscoveryService {
         return DiscoveryChapterDetailResponse.from(chapter, likeCount, likedByMe, prevChapterId, nextChapterId);
     }
 }
+

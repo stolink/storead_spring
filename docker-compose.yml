@@ -3,19 +3,11 @@ version: "3.8"
 services:
   # Spring Boot Application
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ${IMAGE_NAME:-storead-backend:latest}
+    image: ${IMAGE_NAME}
     container_name: storead-backend
     environment:
       # Spring Profile
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      # PostgreSQL
-      POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres}
-      POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME:-storead}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-storead123}
       # Storage path
       APP_STORAGE_BASE_PATH: /app/storage/uploads
       # CORS
@@ -26,41 +18,10 @@ services:
       - backend_storage:/app/storage/uploads
     networks:
       - storead-network
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16.11-alpine
-    container_name: storead-postgres
-    environment:
-      POSTGRES_DB: storead
-      POSTGRES_USER: ${POSTGRESQL_USERNAME:-storead}
-      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-storead123}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - storead-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storead -d storead"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   backend_storage:
-  postgres_data:
 
 networks:
   storead-network:
