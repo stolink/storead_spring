@@ -23,9 +23,21 @@ public interface WorkRepository extends JpaRepository<Work, UUID> {
 
     Optional<Work> findByIdAndAuthorId(UUID id, UUID authorId);
 
-    @Query("SELECT w FROM Work w JOIN FETCH w.author WHERE w.title LIKE %:keyword% OR w.author.nickname LIKE %:keyword%")
+    /**
+     * 키워드로 작품 검색 (N+1 문제 해결 - @EntityGraph 사용)
+     */
+    @EntityGraph(attributePaths = {"author"})
+    @Query("SELECT w FROM Work w WHERE w.title LIKE %:keyword% OR w.author.nickname LIKE %:keyword%")
     Page<Work> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query("SELECT w FROM Work w JOIN FETCH w.author ORDER BY w.createdAt DESC")
+    /**
+     * 작품 ID 목록으로 챕터 수 조회 (N+1 문제 해결 - 배치 조회)
+     */
+    @Query("SELECT c.work.id, COUNT(c) FROM Chapter c WHERE c.work.id IN :workIds GROUP BY c.work.id")
+    List<Object[]> countChaptersByWorkIds(@Param("workIds") List<UUID> workIds);
+
+    @EntityGraph(attributePaths = {"author"})
+    @Query("SELECT w FROM Work w ORDER BY w.createdAt DESC")
     Page<Work> findAllOrderByCreatedAtDesc(Pageable pageable);
 }
+
