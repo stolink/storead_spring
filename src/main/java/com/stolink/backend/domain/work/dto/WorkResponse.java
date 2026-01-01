@@ -22,6 +22,8 @@ public class WorkResponse {
     private Genre genre;
     private WorkStatus status;
     private int chapterCount;
+    private Long ratingSum;
+    private Long ratingCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -36,6 +38,8 @@ public class WorkResponse {
                 .genre(work.getGenre())
                 .status(work.getStatus())
                 .chapterCount(0)
+                .ratingSum(work.getRatingSum())
+                .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
                 .build();
@@ -52,6 +56,8 @@ public class WorkResponse {
                 .genre(work.getGenre())
                 .status(work.getStatus())
                 .chapterCount(chapterCount)
+                .ratingSum(work.getRatingSum())
+                .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
                 .build();

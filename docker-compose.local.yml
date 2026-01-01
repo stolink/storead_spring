@@ -1,0 +1,55 @@
+# =============================================================================
+# storead_spring - Local Development Docker Compose
+# =============================================================================
+# 사전 조건: stolink_spring/docker-compose.local.yml이 먼저 실행되어야 함
+#   (Neo4j, PostgreSQL, stolink-shared-network 제공)
+#
+# 실행:
+#   docker-compose -f docker-compose.local.yml up --build -d
+# 중단:
+#   docker-compose -f docker-compose.local.yml down
+# =============================================================================
+
+services:
+  # Spring Boot Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${IMAGE_NAME:-storead-backend:latest}
+    container_name: storead-backend
+    environment:
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      # PostgreSQL (stolink_spring에서 제공)
+      SPRING_DATASOURCE_URL: jdbc:postgresql://stolink-postgres-local:5432/stolink
+      SPRING_DATASOURCE_USERNAME: stolink
+      SPRING_DATASOURCE_PASSWORD: stolink123
+      # Neo4j (stolink_spring에서 제공)
+      SPRING_NEO4J_URI: bolt://stolink-neo4j-local:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: stolink123
+      # Storage path
+      APP_STORAGE_BASE_PATH: /app/storage/uploads
+      # CORS
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:5174}
+    ports:
+      - "8081:8080" # stolink_spring이 8080 사용하므로 8081로 변경
+    volumes:
+      - backend_storage:/app/storage/uploads
+    networks:
+      - stolink-shared-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  backend_storage:
+
+networks:
+  stolink-shared-network:
+    external: true # stolink_spring/docker-compose.local.yml에서 생성한 네트워크 사용

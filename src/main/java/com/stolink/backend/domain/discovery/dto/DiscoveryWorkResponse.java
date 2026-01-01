@@ -21,6 +21,8 @@ public class DiscoveryWorkResponse {
     private WorkStatus status;
     private String authorNickname;
     private int chapterCount;
+    private Long ratingSum;
+    private Long ratingCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -34,6 +36,8 @@ public class DiscoveryWorkResponse {
                 .status(work.getStatus())
                 .authorNickname(work.getAuthor().getNickname())
                 .chapterCount(chapterCount)
+                .ratingSum(work.getRatingSum())
+                .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
                 .build();
