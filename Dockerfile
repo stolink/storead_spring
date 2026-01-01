@@ -9,8 +9,8 @@ COPY gradle gradle
 COPY build.gradle .
 COPY settings.gradle .
 
-# Make gradlew executable
-RUN chmod +x ./gradlew
+# Convert Windows line endings to Unix and make gradlew executable
+RUN sed -i 's/\r$//' ./gradlew && chmod +x ./gradlew
 
 # Download dependencies
 RUN ./gradlew dependencies --no-daemon
