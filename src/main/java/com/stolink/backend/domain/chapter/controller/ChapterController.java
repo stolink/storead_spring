@@ -20,7 +20,8 @@ public class ChapterController {
 
     @GetMapping("/works/{workId}/chapters")
     public ApiResponse<List<ChapterResponse>> getChapters(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID workId) {
         List<ChapterResponse> chapters = chapterService.getChapters(userId, workId);
         return ApiResponse.ok(chapters);
@@ -29,7 +30,8 @@ public class ChapterController {
     @PostMapping("/works/{workId}/chapters")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ChapterResponse> createChapter(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID workId,
             @Valid @RequestBody CreateChapterRequest request) {
         ChapterResponse chapter = chapterService.createChapter(userId, workId, request);
@@ -38,7 +40,8 @@ public class ChapterController {
 
     @GetMapping("/chapters/{id}")
     public ApiResponse<ChapterDetailResponse> getChapter(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID id) {
         ChapterDetailResponse chapter = chapterService.getChapter(userId, id);
         return ApiResponse.ok(chapter);
@@ -46,7 +49,8 @@ public class ChapterController {
 
     @PatchMapping("/chapters/{id}")
     public ApiResponse<ChapterDetailResponse> updateChapter(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID id,
             @RequestBody UpdateChapterRequest request) {
         ChapterDetailResponse chapter = chapterService.updateChapter(userId, id, request);
@@ -56,7 +60,8 @@ public class ChapterController {
     @DeleteMapping("/chapters/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteChapter(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID id) {
         chapterService.deleteChapter(userId, id);
     }

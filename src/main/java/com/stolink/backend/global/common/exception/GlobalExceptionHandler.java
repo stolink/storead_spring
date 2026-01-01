@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -63,6 +64,18 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.<Void>builder()
                                                 .status(HttpStatus.BAD_REQUEST)
                                                 .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+                log.error("Method argument type mismatch: {}", ex.getMessage());
+                String message = String.format("파라미터 '%s'의 값이 잘못되었습니다: %s", ex.getName(), ex.getValue());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(message)
                                                 .build());
         }
 

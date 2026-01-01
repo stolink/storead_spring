@@ -17,7 +17,8 @@ public class LikeController {
 
     @PostMapping("/{id}/like")
     public ApiResponse<LikeResponse> toggleCommentLike(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID id) {
         LikeResponse response = likeService.toggleCommentLike(userId, id);
         return ApiResponse.ok(response);

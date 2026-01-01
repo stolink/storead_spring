@@ -39,7 +39,8 @@ public class AuthController {
 
     @PatchMapping("/me")
     public ApiResponse<UserResponse> updateMe(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @RequestParam(required = false) String nickname,
             @RequestParam(required = false) String avatarUrl) {
         UserResponse user = authService.updateUser(userId, nickname, avatarUrl);

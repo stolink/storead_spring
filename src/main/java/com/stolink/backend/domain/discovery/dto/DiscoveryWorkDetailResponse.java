@@ -25,6 +25,8 @@ public class DiscoveryWorkDetailResponse {
     private String authorAvatarUrl;
     private int chapterCount;
     private List<DiscoveryChapterResponse> chapters;
+    private Long ratingSum;
+    private Long ratingCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -41,6 +43,8 @@ public class DiscoveryWorkDetailResponse {
                 .authorAvatarUrl(work.getAuthor().getAvatarUrl())
                 .chapterCount(chapterCount)
                 .chapters(chapters)
+                .ratingSum(work.getRatingSum())
+                .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
                 .build();

@@ -19,7 +19,8 @@ public class BookmarkController {
 
     @GetMapping("/bookmarks/{chapterId}")
     public ApiResponse<BookmarkResponse> getBookmark(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID chapterId) {
         return bookmarkService.getBookmark(userId, chapterId)
                 .map(ApiResponse::ok)
@@ -28,7 +29,8 @@ public class BookmarkController {
 
     @PostMapping("/bookmarks/{chapterId}")
     public ApiResponse<BookmarkResponse> saveBookmark(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID chapterId,
             @RequestBody SaveBookmarkRequest request) {
         BookmarkResponse bookmark = bookmarkService.saveBookmark(userId, chapterId, request);
@@ -37,7 +39,8 @@ public class BookmarkController {
 
     @GetMapping("/works/{workId}/reading-progress")
     public ApiResponse<ReadingProgressResponse> getReadingProgress(
-            @RequestHeader("X-User-Id") UUID userId,
+            // @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID workId) {
         ReadingProgressResponse progress = bookmarkService.getReadingProgress(userId, workId);
         return ApiResponse.ok(progress);
