@@ -6,6 +6,7 @@ import com.stolink.backend.domain.rating.service.RatingService;
 import com.stolink.backend.global.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,8 +20,7 @@ public class RatingController {
 
     @PostMapping("/chapters/{id}/rating")
     public ApiResponse<RatingResponse> rateChapter(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id,
             @Valid @RequestBody RatingRequest request) {
         RatingResponse response = ratingService.rateChapter(userId, id, request);
@@ -29,8 +29,7 @@ public class RatingController {
 
     @GetMapping("/chapters/{id}/rating")
     public ApiResponse<RatingResponse> getChapterRating(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         RatingResponse response = ratingService.getChapterRating(userId, id);
         return ApiResponse.ok(response);
@@ -38,8 +37,7 @@ public class RatingController {
 
     @DeleteMapping("/chapters/{id}/rating")
     public ApiResponse<Void> deleteChapterRating(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         ratingService.deleteChapterRating(userId, id);
         return ApiResponse.ok(null);
