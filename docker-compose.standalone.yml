@@ -24,8 +24,8 @@ services:
       # PostgreSQL
       POSTGRESQL_URL: ${POSTGRESQL_URL:-postgres}
       POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
-      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME:-storead}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-storead123}
+      POSTGRESQL_USERNAME: ${POSTGRESQL_USERNAME:-stolink}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-stolink123}
       # Storage path
       APP_STORAGE_BASE_PATH: /app/storage/uploads
       # CORS
@@ -52,9 +52,9 @@ services:
     image: postgres:16.11-alpine
     container_name: storead-postgres
     environment:
-      POSTGRES_DB: storead
-      POSTGRES_USER: ${POSTGRESQL_USERNAME:-storead}
-      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-storead123}
+      POSTGRES_DB: stolink
+      POSTGRES_USER: ${POSTGRESQL_USERNAME:-stolink}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-stolink123}
     ports:
       - "5433:5432"
     volumes:
@@ -63,7 +63,7 @@ services:
       - storead-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U storead -d storead" ]
+      test: ["CMD-SHELL", "pg_isready -U stolink -d stolink"]
       interval: 10s
       timeout: 5s
       retries: 5
