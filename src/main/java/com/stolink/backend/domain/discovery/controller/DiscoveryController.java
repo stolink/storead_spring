@@ -6,6 +6,7 @@ import com.stolink.backend.domain.discovery.dto.DiscoveryWorkResponse;
 import com.stolink.backend.domain.discovery.service.DiscoveryService;
 import com.stolink.backend.global.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/discovery")
 @RequiredArgsConstructor
@@ -22,17 +24,22 @@ public class DiscoveryController {
 
         private final DiscoveryService discoveryService;
 
-        @GetMapping("/works")
+        @GetMapping({ "", "/works" })
         public ApiResponse<Map<String, Object>> getWorks(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size,
                         @RequestParam(defaultValue = "createdAt") String sort,
                         @RequestParam(defaultValue = "desc") String order) {
 
+                log.info("Discovery API: getWorks requested. page={}, size={}, sort={}, order={}", page, size, sort,
+                                order);
+
                 Sort.Direction direction = order.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
                 Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, sort));
 
                 Page<DiscoveryWorkResponse> works = discoveryService.getWorks(pageable);
+
+                log.info("Discovery API: Found {} works. Sending response.", works.getTotalElements());
 
                 return ApiResponse.ok(Map.of(
                                 "works", works.getContent(),

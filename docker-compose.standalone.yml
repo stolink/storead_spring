@@ -41,7 +41,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -56,14 +56,14 @@ services:
       POSTGRES_USER: ${POSTGRESQL_USERNAME:-storead}
       POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-storead123}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - storead-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storead -d storead"]
+      test: [ "CMD-SHELL", "pg_isready -U storead -d storead" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,6 +71,7 @@ services:
 volumes:
   backend_storage:
   postgres_data:
+
 
 networks:
   storead-network:
