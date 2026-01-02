@@ -25,9 +25,9 @@ public class GlobalExceptionHandler {
                         HttpServletRequest request) {
                 log.error("Unauthorized: {} [URI: {}]", ex.getMessage(), request.getRequestURI());
                 return ResponseEntity
-                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .status(HttpStatus.UNAUTHORIZED)
                                 .body(ApiResponse.<Void>builder()
-                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .status(HttpStatus.UNAUTHORIZED)
                                                 .message(ex.getMessage())
                                                 .build());
         }
@@ -40,9 +40,9 @@ public class GlobalExceptionHandler {
                                 ? "로그인이 필요합니다."
                                 : String.format("필수 헤더 '%s'가 누락되었습니다.", ex.getHeaderName());
                 return ResponseEntity
-                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .status(HttpStatus.UNAUTHORIZED)
                                 .body(ApiResponse.<Void>builder()
-                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .status(HttpStatus.UNAUTHORIZED)
                                                 .message(message)
                                                 .build());
         }

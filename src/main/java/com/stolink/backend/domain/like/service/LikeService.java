@@ -96,9 +96,15 @@ public class LikeService {
                     .user(user)
                     .work(work)
                     .build();
-            workLikeRepository.save(like);
-            System.out.println("[LikeService] Like saved.");
-            liked = true;
+            try {
+                workLikeRepository.save(like);
+                System.out.println("[LikeService] Like saved.");
+                liked = true;
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // 동시성 이슈로 이미 저장된 경우
+                System.out.println("[LikeService] Duplicate like detected. Considering as liked.");
+                liked = true;
+            }
         }
 
         long likeCount = workLikeRepository.countByWorkId(workId);
