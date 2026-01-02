@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,8 +23,7 @@ public class LibraryController {
 
     @GetMapping
     public ApiResponse<Map<String, Object>> getLibrary(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -45,8 +45,7 @@ public class LibraryController {
     @PostMapping("/{workId}")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<LibraryResponse> addToLibrary(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID workId) {
         LibraryResponse response = libraryService.addToLibrary(userId, workId);
         return ApiResponse.created(response);
@@ -55,16 +54,14 @@ public class LibraryController {
     @DeleteMapping("/{workId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeFromLibrary(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID workId) {
         libraryService.removeFromLibrary(userId, workId);
     }
 
     @GetMapping("/{workId}/status")
     public ApiResponse<Map<String, Boolean>> checkLibraryStatus(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID workId) {
         boolean inLibrary = libraryService.isInLibrary(userId, workId);
         return ApiResponse.ok(Map.of("inLibrary", inLibrary));

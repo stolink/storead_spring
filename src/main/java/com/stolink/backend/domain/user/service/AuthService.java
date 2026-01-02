@@ -2,12 +2,15 @@ package com.stolink.backend.domain.user.service;
 
 import com.stolink.backend.domain.user.dto.LoginRequest;
 import com.stolink.backend.domain.user.dto.RegisterRequest;
+import com.stolink.backend.domain.user.dto.TokenResponse;
 import com.stolink.backend.domain.user.dto.UserResponse;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.UserRepository;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
+import com.stolink.backend.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,39 +23,40 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
-    public UserResponse register(RegisterRequest request) {
+    public TokenResponse register(RegisterRequest request) {
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
         }
 
-        // For simplicity, we're not hashing password (you mentioned no JWT/Security)
-        // In production, you should hash the password
+        // BCrypt로 비밀번호 해싱
         User user = User.builder()
                 .email(request.getEmail())
-                .password(request.getPassword()) // Should be hashed
+                .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .build();
 
         user = userRepository.save(user);
         log.info("User registered: {}", user.getEmail());
 
-        return UserResponse.from(user);
+        return generateTokenResponse(user);
     }
 
-    public UserResponse login(LoginRequest request) {
+    public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
 
-        // Simple password check (in production, use proper password hashing)
-        if (!user.getPassword().equals(request.getPassword())) {
+        // BCrypt로 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         log.info("User logged in: {}", user.getEmail());
-        return UserResponse.from(user);
+        return generateTokenResponse(user);
     }
 
     public UserResponse getUser(UUID userId) {
@@ -68,5 +72,16 @@ public class AuthService {
 
         user.updateProfile(nickname, avatarUrl);
         return UserResponse.from(user);
+    }
+
+    /**
+     * JWT 토큰 응답 생성
+     */
+    private TokenResponse generateTokenResponse(User user) {
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        long expiresIn = jwtTokenProvider.getAccessTokenExpirySeconds();
+
+        return TokenResponse.of(accessToken, refreshToken, expiresIn, user);
     }
 }

@@ -4,6 +4,7 @@ import com.stolink.backend.domain.like.dto.LikeResponse;
 import com.stolink.backend.domain.like.service.LikeService;
 import com.stolink.backend.global.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,8 +18,7 @@ public class LikeController {
 
     @PostMapping("/{id}/like")
     public ApiResponse<LikeResponse> toggleCommentLike(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         LikeResponse response = likeService.toggleCommentLike(userId, id);
         return ApiResponse.ok(response);

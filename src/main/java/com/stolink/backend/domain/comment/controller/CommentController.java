@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,8 +48,7 @@ public class CommentController {
     @PostMapping("/chapters/{chapterId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentResponse> createComment(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID chapterId,
             @Valid @RequestBody CreateCommentRequest request) {
         CommentResponse comment = commentService.createComment(userId, chapterId, request);
@@ -64,8 +64,7 @@ public class CommentController {
     @PostMapping("/comments/{id}/replies")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentResponse> createReply(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id,
             @Valid @RequestBody CreateCommentRequest request) {
         CommentResponse reply = commentService.createReply(userId, id, request);
@@ -75,8 +74,7 @@ public class CommentController {
     @DeleteMapping("/comments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteComment(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         commentService.deleteComment(userId, id);
     }

@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -27,8 +28,7 @@ public class WorkController {
 
     @GetMapping
     public ApiResponse<Map<String, Object>> getWorks(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "updatedAt") String sort,
@@ -53,8 +53,7 @@ public class WorkController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<WorkResponse> createWork(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody CreateWorkRequest request) {
         WorkResponse work = workService.createWork(userId, request);
         return ApiResponse.created(work);
@@ -62,8 +61,7 @@ public class WorkController {
 
     @GetMapping("/{id}")
     public ApiResponse<WorkResponse> getWork(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         WorkResponse work = workService.getWork(userId, id);
         return ApiResponse.ok(work);
@@ -71,8 +69,7 @@ public class WorkController {
 
     @PatchMapping("/{id}")
     public ApiResponse<WorkResponse> updateWork(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id,
             @RequestBody UpdateWorkRequest request) {
         WorkResponse work = workService.updateWork(userId, id, request);
@@ -82,8 +79,7 @@ public class WorkController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteWork(
-            // @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         workService.deleteWork(userId, id);
     }
