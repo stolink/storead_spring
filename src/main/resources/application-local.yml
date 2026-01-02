@@ -37,5 +37,6 @@ app:
     base-path: ./storage/uploads
 
 # Server Configuration (Override for Local)
+# 로컬에서도 내부 포트는 8080 사용 (docker-compose에서 8081:8080으로 매핑)
 server:
-  port: 8081
+  port: 8080
