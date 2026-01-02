@@ -9,6 +9,7 @@ import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -80,9 +82,10 @@ public class DiscoveryService {
      * - userId가 null이면 비로그인 상태
      * - userId가 있으면 좋아요/서재 상태 조회
      */
+    @Transactional(readOnly = true)
     public DiscoveryWorkDetailResponse getWorkDetail(UUID workId, UUID userId) {
         // [DEBUG] User ID 확인 로그
-        System.out.println("[DiscoveryService] getWorkDetail called. workId: " + workId + ", userId: " + userId);
+        log.info("[DiscoveryService] getWorkDetail called. workId: {}, userId: {}", workId, userId);
 
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));

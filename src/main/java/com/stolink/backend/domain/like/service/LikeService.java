@@ -14,6 +14,7 @@ import com.stolink.backend.domain.work.repository.WorkRepository;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import com.stolink.backend.global.util.AuthValidationUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -73,7 +75,7 @@ public class LikeService {
      */
     @Transactional
     public LikeResponse toggleWorkLike(UUID userId, UUID workId) {
-        System.out.println("[LikeService] toggleWorkLike called. userId: " + userId + ", workId: " + workId);
+        log.info("[LikeService] toggleWorkLike called. userId: {}, workId: {}", userId, workId);
         AuthValidationUtil.requireUserId(userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
@@ -81,34 +83,33 @@ public class LikeService {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
-        // 중복 방지 로직 강화: 리스트로 조회하여 모두 삭제
-        List<WorkLike> existingLikes = workLikeRepository.findAllByUserIdAndWorkId(userId, workId);
+        // 최적화: 단건 조회 (Optional)
+        Optional<WorkLike> existingLike = workLikeRepository.findByUserIdAndWorkId(userId, workId);
 
         boolean liked;
-        if (!existingLikes.isEmpty()) {
-            System.out.println("[LikeService] Found " + existingLikes.size()
-                    + " existing like(s). Deleting all. userId: " + userId);
-            workLikeRepository.deleteAll(existingLikes);
+        if (existingLike.isPresent()) {
+            log.info("[LikeService] Found existing like. Deleting. userId: {}", userId);
+            workLikeRepository.delete(existingLike.get());
             liked = false;
         } else {
-            System.out.println("[LikeService] Like NOT FOUND. Creating new. userId: " + userId);
+            log.info("[LikeService] Like NOT FOUND. Creating new. userId: {}", userId);
             WorkLike like = WorkLike.builder()
                     .user(user)
                     .work(work)
                     .build();
             try {
                 workLikeRepository.save(like);
-                System.out.println("[LikeService] Like saved.");
+                log.info("[LikeService] Like saved.");
                 liked = true;
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
                 // 동시성 이슈로 이미 저장된 경우
-                System.out.println("[LikeService] Duplicate like detected. Considering as liked.");
+                log.info("[LikeService] Duplicate like detected. Considering as liked.");
                 liked = true;
             }
         }
 
         long likeCount = workLikeRepository.countByWorkId(workId);
-        System.out.println("[LikeService] Final likeCount: " + likeCount + ", isLiked: " + liked);
+        log.info("[LikeService] Final likeCount: {}, isLiked: {}", likeCount, liked);
         return LikeResponse.of(liked, likeCount);
     }
 
@@ -122,8 +123,7 @@ public class LikeService {
 
         boolean liked = userId != null && workLikeRepository.existsByUserIdAndWorkId(userId, workId);
         long likeCount = workLikeRepository.countByWorkId(workId);
-        System.out.println(
-                "[LikeService] getWorkLikeStatus. workId: " + workId + ", userId: " + userId + " -> liked: " + liked);
+        log.info("[LikeService] getWorkLikeStatus. workId: {}, userId: {} -> liked: {}", workId, userId, liked);
         return LikeResponse.of(liked, likeCount);
     }
 }
