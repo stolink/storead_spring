@@ -119,6 +119,11 @@ jobs:
           NEO4J_PORT: ${{ vars.NEO4J_PORT }}
           CLOUDFRONT_URL: ${{ vars.CLOUDFRONT_URL }}
           CLOUDFRONT_URL_DEV: ${{ vars.STOREAD_CLOUDFRONT_URL_DEV }}
+          STOREAD_CLOUDFRONT_URL_DEV: ${{ vars.STOREAD_CLOUDFRONT_URL_DEV }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_COOKIE_DOMAIN: ${{ vars.STOREAD_CLOUDFRONT_URL_DEV }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           # .env 파일 내용 생성
@@ -131,7 +136,12 @@ jobs:
           NEO4J_PASSWORD=${NEO4J_PASSWORD}
           NEO4J_PORT=${NEO4J_PORT}
           IMAGE_NAME=ghcr.io/stolink/storead-spring:dev-latest
-          CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174,https://${CLOUDFRONT_URL},https://${CLOUDFRONT_URL_DEV}
+          CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174,https://${CLOUDFRONT_URL},https://${CLOUDFRONT_URL_DEV},https://${STOREAD_CLOUDFRONT_URL_DEV}
+          OAUTH2_REDIRECT_URI=https://${STOREAD_CLOUDFRONT_URL_DEV}/oauth2/callback
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_COOKIE_DOMAIN=${JWT_COOKIE_DOMAIN}
           SPRING_PROFILES_ACTIVE=dev"
 
           # docker-compose.yml 내용 읽기
