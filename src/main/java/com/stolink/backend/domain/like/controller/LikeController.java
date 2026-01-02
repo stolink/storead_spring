@@ -9,18 +9,32 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/comments")
 @RequiredArgsConstructor
 public class LikeController {
 
     private final LikeService likeService;
 
-    @PostMapping("/{id}/like")
+    @PostMapping("/api/comments/{id}/like")
     public ApiResponse<LikeResponse> toggleCommentLike(
-            // @RequestHeader("X-User-Id") UUID userId,
             @RequestHeader(value = "X-User-Id", required = false) UUID userId,
             @PathVariable UUID id) {
         LikeResponse response = likeService.toggleCommentLike(userId, id);
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/api/works/{id}/like")
+    public ApiResponse<LikeResponse> toggleWorkLike(
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @PathVariable UUID id) {
+        LikeResponse response = likeService.toggleWorkLike(userId, id);
+        return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/api/works/{id}/like")
+    public ApiResponse<LikeResponse> getWorkLikeStatus(
+            @RequestHeader(value = "X-User-Id", required = false) UUID userId,
+            @PathVariable UUID id) {
+        LikeResponse response = likeService.getWorkLikeStatus(userId, id);
         return ApiResponse.ok(response);
     }
 }

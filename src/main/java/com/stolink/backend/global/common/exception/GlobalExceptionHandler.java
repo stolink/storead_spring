@@ -2,6 +2,7 @@ package com.stolink.backend.global.common.exception;
 
 import com.stolink.backend.global.common.dto.ApiResponse;
 import com.stolink.backend.global.common.dto.ErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +12,40 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import org.springframework.web.bind.MissingRequestHeaderException;
+
 import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+        @ExceptionHandler(UnauthorizedException.class)
+        public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException ex,
+                        HttpServletRequest request) {
+                log.error("Unauthorized: {} [URI: {}]", ex.getMessage(), request.getRequestURI());
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(MissingRequestHeaderException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMissingRequestHeader(MissingRequestHeaderException ex,
+                        HttpServletRequest request) {
+                log.error("Missing request header: {} [URI: {}]", ex.getMessage(), request.getRequestURI());
+                String message = "X-User-Id".equals(ex.getHeaderName())
+                                ? "로그인이 필요합니다."
+                                : String.format("필수 헤더 '%s'가 누락되었습니다.", ex.getHeaderName());
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .message(message)
+                                                .build());
+        }
 
         @ExceptionHandler(AccessDeniedException.class)
         public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
@@ -68,7 +98,8 @@ public class GlobalExceptionHandler {
         }
 
         @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-        public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatch(
+                        MethodArgumentTypeMismatchException ex) {
                 log.error("Method argument type mismatch: {}", ex.getMessage());
                 String message = String.format("파라미터 '%s'의 값이 잘못되었습니다: %s", ex.getName(), ex.getValue());
                 return ResponseEntity
