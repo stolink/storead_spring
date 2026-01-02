@@ -12,6 +12,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
+        ddl-auto: update
         format_sql: false
 
   # OAuth2 Configuration
