@@ -21,7 +21,7 @@ services:
       # CORS
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:5174}
     ports:
-      - "8080:8080"
+      - "8080:8081"
     volumes:
       - backend_storage:/app/storage/uploads
     networks:

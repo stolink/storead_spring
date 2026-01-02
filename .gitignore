@@ -30,5 +30,5 @@ logs/
 .env
 .env.local
 
-smart-commit-md.mdbin/
+smart-commit-md.md
 bin/

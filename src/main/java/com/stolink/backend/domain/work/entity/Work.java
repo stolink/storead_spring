@@ -41,6 +41,9 @@ public class Work extends BaseEntity {
     @Builder.Default
     private WorkStatus status = WorkStatus.ONGOING;
 
+    @Column(columnDefinition = "TEXT")
+    private String characterGraphData;
+
     @Column(nullable = false)
     @Builder.Default
     private Long ratingSum = 0L;
@@ -49,12 +52,13 @@ public class Work extends BaseEntity {
     @Builder.Default
     private Long ratingCount = 0L;
 
-    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status) {
+    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status, String characterGraphData) {
         if (title != null) this.title = title;
         if (synopsis != null) this.synopsis = synopsis;
         if (coverImageUrl != null) this.coverImageUrl = coverImageUrl;
         if (genre != null) this.genre = genre;
         if (status != null) this.status = status;
+        if (characterGraphData != null) this.characterGraphData = characterGraphData;
     }
 
     public void addRating(int score) {
