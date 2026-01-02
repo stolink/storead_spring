@@ -1,5 +1,6 @@
 package com.stolink.backend.domain.like.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -7,12 +8,13 @@ import lombok.Getter;
 @Builder
 public class LikeResponse {
 
-    private boolean liked;
+    @JsonProperty("isLiked")
+    private boolean isLiked;
     private long likeCount;
 
-    public static LikeResponse of(boolean liked, long likeCount) {
+    public static LikeResponse of(boolean isLiked, long likeCount) {
         return LikeResponse.builder()
-                .liked(liked)
+                .isLiked(isLiked)
                 .likeCount(likeCount)
                 .build();
     }

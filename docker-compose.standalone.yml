@@ -18,6 +18,8 @@ services:
       dockerfile: Dockerfile
     image: ${IMAGE_NAME:-storead-backend:latest}
     container_name: storead-backend
+    env_file:
+      - .env
     environment:
       # Spring Profile
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
@@ -63,7 +65,7 @@ services:
       - storead-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stolink -d stolink"]
+      test: [ "CMD-SHELL", "pg_isready -U stolink -d stolink" ]
       interval: 10s
       timeout: 5s
       retries: 5

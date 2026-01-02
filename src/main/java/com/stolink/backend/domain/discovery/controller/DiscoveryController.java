@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -71,9 +72,16 @@ public class DiscoveryController {
                                                 "hasNext", works.hasNext())));
         }
 
+        /**
+         * 작품 상세 조회
+         * - @AuthenticationPrincipal: permitAll 엔드포인트에서도 동작
+         * - 토큰이 없으면 userId = null
+         */
         @GetMapping("/works/{id}")
-        public ApiResponse<DiscoveryWorkDetailResponse> getWorkDetail(@PathVariable UUID id) {
-                DiscoveryWorkDetailResponse work = discoveryService.getWorkDetail(id);
+        public ApiResponse<DiscoveryWorkDetailResponse> getWorkDetail(
+                        @PathVariable UUID id,
+                        @AuthenticationPrincipal UUID userId) {
+                DiscoveryWorkDetailResponse work = discoveryService.getWorkDetail(id, userId);
                 return ApiResponse.ok(work);
         }
 
