@@ -22,9 +22,9 @@ public class DraftController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDraft(@PathVariable UUID id) {
-        if (!draftRepository.existsById(id)) {
+        int deleted = draftRepository.deleteByIdAndReturnCount(id);
+        if (deleted == 0) {
             throw new ResourceNotFoundException("Draft를 찾을 수 없습니다: " + id);
         }
-        draftRepository.deleteById(id);
     }
 }
