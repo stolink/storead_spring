@@ -81,6 +81,9 @@ public class DiscoveryService {
      * - userId가 있으면 좋아요/서재 상태 조회
      */
     public DiscoveryWorkDetailResponse getWorkDetail(UUID workId, UUID userId) {
+        // [DEBUG] User ID 확인 로그
+        System.out.println("[DiscoveryService] getWorkDetail called. workId: " + workId + ", userId: " + userId);
+
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 

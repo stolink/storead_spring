@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -72,6 +73,7 @@ public class LikeService {
      */
     @Transactional
     public LikeResponse toggleWorkLike(UUID userId, UUID workId) {
+        System.out.println("[LikeService] toggleWorkLike called. userId: " + userId + ", workId: " + workId);
         AuthValidationUtil.requireUserId(userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
@@ -79,22 +81,28 @@ public class LikeService {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
-        Optional<WorkLike> existingLike = workLikeRepository.findByUserIdAndWorkId(userId, workId);
+        // 중복 방지 로직 강화: 리스트로 조회하여 모두 삭제
+        List<WorkLike> existingLikes = workLikeRepository.findAllByUserIdAndWorkId(userId, workId);
 
         boolean liked;
-        if (existingLike.isPresent()) {
-            workLikeRepository.delete(existingLike.get());
+        if (!existingLikes.isEmpty()) {
+            System.out.println("[LikeService] Found " + existingLikes.size()
+                    + " existing like(s). Deleting all. userId: " + userId);
+            workLikeRepository.deleteAll(existingLikes);
             liked = false;
         } else {
+            System.out.println("[LikeService] Like NOT FOUND. Creating new. userId: " + userId);
             WorkLike like = WorkLike.builder()
                     .user(user)
                     .work(work)
                     .build();
             workLikeRepository.save(like);
+            System.out.println("[LikeService] Like saved.");
             liked = true;
         }
 
         long likeCount = workLikeRepository.countByWorkId(workId);
+        System.out.println("[LikeService] Final likeCount: " + likeCount + ", isLiked: " + liked);
         return LikeResponse.of(liked, likeCount);
     }
 
@@ -108,6 +116,8 @@ public class LikeService {
 
         boolean liked = userId != null && workLikeRepository.existsByUserIdAndWorkId(userId, workId);
         long likeCount = workLikeRepository.countByWorkId(workId);
+        System.out.println(
+                "[LikeService] getWorkLikeStatus. workId: " + workId + ", userId: " + userId + " -> liked: " + liked);
         return LikeResponse.of(liked, likeCount);
     }
 }
