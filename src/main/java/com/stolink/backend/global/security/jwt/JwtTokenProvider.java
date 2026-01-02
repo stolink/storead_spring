@@ -33,8 +33,8 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
-        if (jwtSecret.length() < 32) {
-            throw new IllegalStateException("JWT secret key must be at least 32 characters long");
+        if (jwtSecret.length() < 64) {
+            throw new IllegalStateException("JWT secret key must be at least 64 characters for HS512 algorithm");
         }
         this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }

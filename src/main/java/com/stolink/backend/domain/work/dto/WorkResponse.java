@@ -21,6 +21,7 @@ public class WorkResponse {
     private String coverImageUrl;
     private Genre genre;
     private WorkStatus status;
+    private String characterGraphData;
     private int chapterCount;
     private Long ratingSum;
     private Long ratingCount;
@@ -37,6 +38,7 @@ public class WorkResponse {
                 .coverImageUrl(work.getCoverImageUrl())
                 .genre(work.getGenre())
                 .status(work.getStatus())
+                .characterGraphData(work.getCharacterGraphData())
                 .chapterCount(0)
                 .ratingSum(work.getRatingSum())
                 .ratingCount(work.getRatingCount())
@@ -55,6 +57,7 @@ public class WorkResponse {
                 .coverImageUrl(work.getCoverImageUrl())
                 .genre(work.getGenre())
                 .status(work.getStatus())
+                .characterGraphData(work.getCharacterGraphData())
                 .chapterCount(chapterCount)
                 .ratingSum(work.getRatingSum())
                 .ratingCount(work.getRatingCount())

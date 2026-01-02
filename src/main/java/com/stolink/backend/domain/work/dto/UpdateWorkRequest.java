@@ -13,4 +13,5 @@ public class UpdateWorkRequest {
     private String coverImageUrl;
     private Genre genre;
     private WorkStatus status;
+    private String characterGraphData;
 }
