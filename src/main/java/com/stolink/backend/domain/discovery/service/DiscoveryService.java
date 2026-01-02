@@ -3,6 +3,8 @@ package com.stolink.backend.domain.discovery.service;
 import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.discovery.dto.*;
+import com.stolink.backend.domain.library.repository.LibraryRepository;
+import com.stolink.backend.domain.like.repository.WorkLikeRepository;
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
@@ -23,6 +25,8 @@ public class DiscoveryService {
 
     private final WorkRepository workRepository;
     private final ChapterRepository chapterRepository;
+    private final WorkLikeRepository workLikeRepository;
+    private final LibraryRepository libraryRepository;
 
     /**
      * 작품 목록 조회 (N+1 문제 해결 - 배치 조회)
@@ -45,7 +49,7 @@ public class DiscoveryService {
      */
     private Page<DiscoveryWorkResponse> convertToResponse(Page<Work> workPage) {
         List<Work> works = workPage.getContent();
-        
+
         if (works.isEmpty()) {
             return new PageImpl<>(Collections.emptyList(), workPage.getPageable(), workPage.getTotalElements());
         }
@@ -54,13 +58,12 @@ public class DiscoveryService {
         List<UUID> workIds = works.stream()
                 .map(Work::getId)
                 .collect(Collectors.toList());
-        
+
         Map<UUID, Long> chapterCountMap = workRepository.countChaptersByWorkIds(workIds)
                 .stream()
                 .collect(Collectors.toMap(
                         row -> (UUID) row[0],
-                        row -> (Long) row[1]
-                ));
+                        row -> (Long) row[1]));
 
         List<DiscoveryWorkResponse> responses = works.stream()
                 .map(work -> {
@@ -72,7 +75,12 @@ public class DiscoveryService {
         return new PageImpl<>(responses, workPage.getPageable(), workPage.getTotalElements());
     }
 
-    public DiscoveryWorkDetailResponse getWorkDetail(UUID workId) {
+    /**
+     * 작품 상세 조회
+     * - userId가 null이면 비로그인 상태
+     * - userId가 있으면 좋아요/서재 상태 조회
+     */
+    public DiscoveryWorkDetailResponse getWorkDetail(UUID workId, UUID userId) {
         Work work = workRepository.findById(workId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
@@ -81,7 +89,15 @@ public class DiscoveryService {
                 .map(DiscoveryChapterResponse::from)
                 .collect(Collectors.toList());
 
-        return DiscoveryWorkDetailResponse.from(work, chapters.size(), chapterResponses);
+        // 좋아요 수 조회
+        long likeCount = workLikeRepository.countByWorkId(workId);
+
+        // 사용자별 상태 조회 (로그인한 경우에만)
+        Boolean isLiked = userId != null ? workLikeRepository.existsByUserIdAndWorkId(userId, workId) : null;
+        Boolean isInLibrary = userId != null ? libraryRepository.existsByUserIdAndWorkId(userId, workId) : null;
+
+        return DiscoveryWorkDetailResponse.from(work, chapters.size(), chapterResponses, likeCount, isLiked,
+                isInLibrary);
     }
 
     @Transactional
@@ -105,8 +121,10 @@ public class DiscoveryService {
         UUID nextChapterId = null;
         for (int i = 0; i < allChapters.size(); i++) {
             if (allChapters.get(i).getId().equals(chapterId)) {
-                if (i > 0) prevChapterId = allChapters.get(i - 1).getId();
-                if (i < allChapters.size() - 1) nextChapterId = allChapters.get(i + 1).getId();
+                if (i > 0)
+                    prevChapterId = allChapters.get(i - 1).getId();
+                if (i < allChapters.size() - 1)
+                    nextChapterId = allChapters.get(i + 1).getId();
                 break;
             }
         }

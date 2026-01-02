@@ -30,7 +30,13 @@ public class DiscoveryWorkDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static DiscoveryWorkDetailResponse from(Work work, int chapterCount, List<DiscoveryChapterResponse> chapters) {
+    // 좋아요 및 서재 관련 필드 (사용자별 상태)
+    private Long likeCount; // 총 좋아요 수
+    private Boolean isLiked; // 현재 사용자가 좋아요 했는지 (비로그인: null)
+    private Boolean isInLibrary; // 현재 사용자가 서재에 추가했는지 (비로그인: null)
+
+    public static DiscoveryWorkDetailResponse from(Work work, int chapterCount, List<DiscoveryChapterResponse> chapters,
+            long likeCount, Boolean isLiked, Boolean isInLibrary) {
         return DiscoveryWorkDetailResponse.builder()
                 .id(work.getId())
                 .title(work.getTitle())
@@ -47,6 +53,9 @@ public class DiscoveryWorkDetailResponse {
                 .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
+                .likeCount(likeCount)
+                .isLiked(isLiked)
+                .isInLibrary(isInLibrary)
                 .build();
     }
 }
