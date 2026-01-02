@@ -30,6 +30,11 @@ public class User extends BaseEntity {
     @Column(length = 500)
     private String avatarUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AuthProvider provider = AuthProvider.LOCAL;
+
     public void updateProfile(String nickname, String avatarUrl) {
         if (nickname != null) {
             this.nickname = nickname;

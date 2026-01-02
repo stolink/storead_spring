@@ -23,4 +23,6 @@ public class CreateWorkRequest {
     private Genre genre;
 
     private WorkStatus status;
+
+    private String characterGraphData;
 }

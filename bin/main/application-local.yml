@@ -1,0 +1,19 @@
+# Local Development Profile
+spring:
+  # PostgreSQL Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/stolink
+    username: stolink
+    password: stolink123
+    driver-class-name: org.postgresql.Driver
+
+# Application Configuration
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:5174
+  storage:
+    base-path: ./storage/uploads
+
+# Server Configuration (Override for Local)
+server:
+  port: 8081

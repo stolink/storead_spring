@@ -2,6 +2,7 @@ package com.stolink.backend.global.config;
 
 import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
+import com.stolink.backend.domain.user.entity.AuthProvider;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.UserRepository;
 import com.stolink.backend.domain.work.entity.Genre;
@@ -71,6 +72,7 @@ public class DataLoader implements CommandLineRunner {
                                 .password("password123") // 데모용 평문 비밀번호
                                 .nickname("작가김철수")
                                 .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test1")
+                                .provider(AuthProvider.LOCAL)
                                 .build()));
 
                 users.add(userRepository.save(User.builder()
@@ -78,6 +80,7 @@ public class DataLoader implements CommandLineRunner {
                                 .password("password123") // 데모용 평문 비밀번호
                                 .nickname("작가이영희")
                                 .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test2")
+                                .provider(AuthProvider.LOCAL)
                                 .build()));
 
                 users.add(userRepository.save(User.builder()
@@ -85,6 +88,7 @@ public class DataLoader implements CommandLineRunner {
                                 .password("password123") // 데모용 평문 비밀번호
                                 .nickname("작가박민수")
                                 .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test3")
+                                .provider(AuthProvider.LOCAL)
                                 .build()));
 
                 return users;
