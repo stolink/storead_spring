@@ -31,3 +31,4 @@ logs/
 .env.local
 
 smart-commit-md.mdbin/
+bin/

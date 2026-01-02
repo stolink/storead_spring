@@ -18,6 +18,8 @@ services:
       dockerfile: Dockerfile
     image: ${IMAGE_NAME:-storead-backend:latest}
     container_name: storead-backend
+    env_file:
+      - .env
     environment:
       # Spring Profile
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
