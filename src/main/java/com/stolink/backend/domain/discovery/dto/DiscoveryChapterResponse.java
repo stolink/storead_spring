@@ -15,6 +15,8 @@ public class DiscoveryChapterResponse {
     private String title;
     private Integer chapterNumber;
     private Long viewCount;
+    private Long ratingSum;
+    private Long ratingCount;
     private LocalDateTime createdAt;
 
     public static DiscoveryChapterResponse from(Chapter chapter) {
@@ -23,6 +25,8 @@ public class DiscoveryChapterResponse {
                 .title(chapter.getTitle())
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
+                .ratingSum(java.util.Objects.requireNonNullElse(chapter.getRatingSum(), 0L))
+                .ratingCount(java.util.Objects.requireNonNullElse(chapter.getRatingCount(), 0L))
                 .createdAt(chapter.getCreatedAt())
                 .build();
     }
