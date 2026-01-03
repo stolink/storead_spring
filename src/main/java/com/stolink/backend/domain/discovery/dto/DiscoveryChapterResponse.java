@@ -25,8 +25,8 @@ public class DiscoveryChapterResponse {
                 .title(chapter.getTitle())
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
-                .ratingSum(chapter.getRatingSum())
-                .ratingCount(chapter.getRatingCount())
+                .ratingSum(java.util.Objects.requireNonNullElse(chapter.getRatingSum(), 0L))
+                .ratingCount(java.util.Objects.requireNonNullElse(chapter.getRatingCount(), 0L))
                 .createdAt(chapter.getCreatedAt())
                 .build();
     }
