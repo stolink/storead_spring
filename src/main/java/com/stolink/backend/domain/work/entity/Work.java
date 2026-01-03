@@ -44,6 +44,9 @@ public class Work extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String characterGraphData;
 
+    @Column(name = "project_id", unique = true)
+    private String projectId;
+
     @Column(nullable = false)
     @Builder.Default
     private Long ratingSum = 0L;

@@ -39,5 +39,11 @@ public interface WorkRepository extends JpaRepository<Work, UUID> {
     @EntityGraph(attributePaths = {"author"})
     @Query("SELECT w FROM Work w ORDER BY w.createdAt DESC")
     Page<Work> findAllOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * projectId로 작품 조회 (Stolink 프로젝트 매핑용)
+     */
+    @EntityGraph(attributePaths = {"author"})
+    Optional<Work> findByProjectId(String projectId);
 }
 

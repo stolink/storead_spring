@@ -32,6 +32,9 @@ public class Chapter extends BaseEntity {
     @Column(nullable = false)
     private Integer chapterNumber;
 
+    @Column(name = "document_id", length = 255)
+    private String documentId;
+
     @Column(nullable = false)
     @Builder.Default
     private Long viewCount = 0L;

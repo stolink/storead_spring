@@ -87,4 +87,15 @@ public class WorkService {
 
         workRepository.delete(work);
     }
+
+    /**
+     * projectId로 작품 조회 (커뮤니티 배포용)
+     */
+    public java.util.Optional<WorkResponse> findByProjectId(String projectId) {
+        return workRepository.findByProjectId(projectId)
+                .map(work -> {
+                    int chapterCount = chapterRepository.countByWorkId(work.getId());
+                    return WorkResponse.from(work, chapterCount);
+                });
+    }
 }

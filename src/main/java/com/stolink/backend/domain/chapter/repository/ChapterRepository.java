@@ -32,4 +32,6 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
             @Param("chapterNumber") int chapterNumber);
 
     void deleteByWorkId(UUID workId);
+
+    boolean existsByWorkIdAndDocumentId(UUID workId, String documentId);
 }

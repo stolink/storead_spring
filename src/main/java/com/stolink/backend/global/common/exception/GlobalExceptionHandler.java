@@ -79,6 +79,30 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(com.stolink.backend.domain.draft.exception.DraftExpiredException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDraftExpired(
+                        com.stolink.backend.domain.draft.exception.DraftExpiredException ex) {
+                log.error("Draft expired: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.GONE)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.GONE)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.community.exception.DuplicateChapterException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDuplicateChapter(
+                        com.stolink.backend.domain.community.exception.DuplicateChapterException ex) {
+                log.error("Duplicate chapter detected: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.CONFLICT)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
                 log.error("Internal server error", ex);

@@ -53,6 +53,8 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/api/discovery/**",
+                                "/api/drafts/**",
+                                "/api/community/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/actuator/health",
