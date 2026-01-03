@@ -7,7 +7,10 @@ import com.stolink.backend.global.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/community")
@@ -23,7 +26,8 @@ public class CommunityController {
     @PostMapping("/publish")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommunityPublishResponse> publish(
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody CommunityPublishRequest request) {
-        return ApiResponse.created(communityService.publish(request));
+        return ApiResponse.created(communityService.publish(request, userId));
     }
 }

@@ -5,6 +5,7 @@ import com.stolink.backend.domain.draft.service.DraftService;
 import com.stolink.backend.global.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -21,8 +22,10 @@ public class DraftController {
      * Stolink에서 생성한 Draft 데이터 조회
      */
     @GetMapping("/{id}")
-    public ApiResponse<DraftResponse> getDraft(@PathVariable UUID id) {
-        return ApiResponse.ok(draftService.findById(id));
+    public ApiResponse<DraftResponse> getDraft(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        return ApiResponse.ok(draftService.findById(id, userId));
     }
 
     /**
@@ -31,7 +34,9 @@ public class DraftController {
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteDraft(@PathVariable UUID id) {
-        draftService.deleteById(id);
+    public void deleteDraft(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        draftService.deleteById(id, userId);
     }
 }

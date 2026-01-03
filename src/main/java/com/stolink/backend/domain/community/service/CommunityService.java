@@ -1,26 +1,20 @@
 package com.stolink.backend.domain.community.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.community.dto.CommunityPublishRequest;
 import com.stolink.backend.domain.community.dto.CommunityPublishResponse;
 import com.stolink.backend.domain.draft.entity.Draft;
-import com.stolink.backend.domain.draft.exception.DraftExpiredException;
-import com.stolink.backend.domain.draft.repository.DraftRepository;
-import com.stolink.backend.domain.user.entity.User;
-import com.stolink.backend.domain.user.repository.UserRepository;
+import com.stolink.backend.domain.draft.service.DraftService;
 import com.stolink.backend.domain.work.entity.Genre;
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
-import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -29,23 +23,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Transactional
 public class CommunityService {
 
-    private final DraftRepository draftRepository;
+    private final DraftService draftService;
     private final WorkRepository workRepository;
     private final ChapterRepository chapterRepository;
-    private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
 
     /**
      * Draft 기반으로 Work(없으면 생성) + Chapter 생성
      */
-    public CommunityPublishResponse publish(CommunityPublishRequest request) {
-        // 1. Draft 조회
-        Draft draft = draftRepository.findById(request.getDraftId())
-                .orElseThrow(() -> new ResourceNotFoundException("Draft", "id", request.getDraftId()));
+    public CommunityPublishResponse publish(CommunityPublishRequest request, UUID userId) {
+        log.info("Starting community publish process: request={}, userId={}", request, userId);
 
-        if (draft.isExpired()) {
-            throw new DraftExpiredException(request.getDraftId());
-        }
+        // 1. Draft 조회 (만료 및 소유권 체크 포함)
+        Draft draft = draftService.findEntityById(request.getDraftId(), userId);
 
         // 2. Work 조회 또는 생성
         AtomicBoolean workCreated = new AtomicBoolean(false);
@@ -65,15 +54,14 @@ public class CommunityService {
 
         // 5. Work graphSnapshot 업데이트 (있는 경우)
         if (draft.getGraphSnapshot() != null) {
-            String graphJson = toJsonString(draft.getGraphSnapshot());
-            work.update(null, null, null, null, null, graphJson);
+            work.update(null, null, null, null, null, draft.getGraphSnapshot());
+            workRepository.save(work);
         }
 
-        // 5. Draft 삭제
-        draftRepository.delete(draft);
+        // 6. Draft 삭제 (소유권 체크 포함)
+        draftService.deleteById(request.getDraftId(), userId);
 
-        log.info("Community publish success: workId={}, chapterId={}, workCreated={}",
-                work.getId(), chapter.getId(), workCreated.get());
+        log.info("Community publish completed: workId={}, chapterId={}", work.getId(), chapter.getId());
 
         return CommunityPublishResponse.builder()
                 .workId(work.getId())
@@ -83,27 +71,30 @@ public class CommunityService {
     }
 
     private Work createWork(Draft draft) {
-        User author = userRepository.findById(draft.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", draft.getUserId()));
-
+        String title = draft.getWorkTitle() != null ? draft.getWorkTitle() : draft.getTitle();
+        String synopsis = draft.getWorkSynopsis() != null ? draft.getWorkSynopsis() : "";
         Genre genre = parseGenre(draft.getWorkGenre());
+        String coverUrl = draft.getWorkCoverUrl();
 
         Work work = Work.builder()
-                .author(author)
-                .projectId(draft.getProjectId())
-                .title(draft.getWorkTitle() != null ? draft.getWorkTitle() : draft.getTitle())
-                .synopsis(draft.getWorkSynopsis() != null ? draft.getWorkSynopsis() : "")
+                .title(title)
+                .synopsis(synopsis)
                 .genre(genre)
-                .coverImageUrl(draft.getWorkCoverUrl())
+                .coverImageUrl(coverUrl)
+                .projectId(draft.getProjectId())
                 .build();
 
-        log.info("Created new work: projectId={}, title={}", draft.getProjectId(), work.getTitle());
+        log.info("Created new work: projectId={}, title={}", draft.getProjectId(), title);
         return workRepository.save(work);
     }
 
-    private Chapter createChapter(Work work, Draft draft, Integer chapterNumber, String overrideTitle) {
-        if (chapterNumber == null) {
-            chapterNumber = chapterRepository.countByWorkId(work.getId()) + 1;
+    private Chapter createChapter(Work work, Draft draft, Integer requestedChapterNumber, String overrideTitle) {
+        int chapterNumber;
+        if (requestedChapterNumber != null) {
+            chapterNumber = requestedChapterNumber;
+        } else {
+            chapterNumber = chapterRepository.findMaxChapterNumberByWorkId(work.getId())
+                    .orElse(0) + 1;
         }
 
         String chapterTitle = (overrideTitle != null && !overrideTitle.isBlank()) 
@@ -124,23 +115,12 @@ public class CommunityService {
     }
 
     private Genre parseGenre(String genreStr) {
-        if (genreStr == null || genreStr.isBlank()) {
-            return Genre.OTHER;
-        }
+        if (genreStr == null) return Genre.OTHER;
         try {
             return Genre.valueOf(genreStr.toUpperCase());
         } catch (IllegalArgumentException e) {
-            log.warn("Unknown genre: {}, using OTHER", genreStr);
+            log.warn("Unknown genre: {}, fallback to OTHER", genreStr);
             return Genre.OTHER;
-        }
-    }
-
-    private String toJsonString(Map<String, Object> map) {
-        try {
-            return objectMapper.writeValueAsString(map);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to convert map to JSON string", e);
-            return null;
         }
     }
 }

@@ -7,9 +7,8 @@ import com.stolink.backend.domain.work.dto.CreateWorkRequest;
 import com.stolink.backend.domain.work.dto.UpdateWorkRequest;
 import com.stolink.backend.domain.work.dto.WorkResponse;
 import com.stolink.backend.domain.work.entity.Work;
-import com.stolink.backend.domain.work.entity.WorkStatus;
+import com.stolink.backend.domain.work.entity.WorkStatus; // Added import for WorkStatus
 import com.stolink.backend.domain.work.repository.WorkRepository;
-import com.stolink.backend.global.common.exception.AccessDeniedException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

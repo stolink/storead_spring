@@ -8,7 +8,9 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "chapters")
+@Table(name = "chapters", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_chapter_work_document", columnNames = {"work_id", "document_id"})
+})
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
