@@ -8,7 +8,10 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "chapters")
+@Table(name = "chapters", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_chapter_work_document", columnNames = {"work_id", "document_id"}),
+    @UniqueConstraint(name = "uk_chapter_work_number", columnNames = {"work_id", "chapter_number"})
+})
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,6 +34,9 @@ public class Chapter extends BaseEntity {
 
     @Column(nullable = false)
     private Integer chapterNumber;
+
+    @Column(name = "document_id", length = 255)
+    private String documentId;
 
     @Column(nullable = false)
     @Builder.Default

@@ -7,9 +7,8 @@ import com.stolink.backend.domain.work.dto.CreateWorkRequest;
 import com.stolink.backend.domain.work.dto.UpdateWorkRequest;
 import com.stolink.backend.domain.work.dto.WorkResponse;
 import com.stolink.backend.domain.work.entity.Work;
-import com.stolink.backend.domain.work.entity.WorkStatus;
+import com.stolink.backend.domain.work.entity.WorkStatus; // Added import for WorkStatus
 import com.stolink.backend.domain.work.repository.WorkRepository;
-import com.stolink.backend.global.common.exception.AccessDeniedException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -86,5 +85,16 @@ public class WorkService {
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
         workRepository.delete(work);
+    }
+
+    /**
+     * projectId로 작품 조회 (커뮤니티 배포용)
+     */
+    public java.util.Optional<WorkResponse> findByProjectId(String projectId) {
+        return workRepository.findByProjectId(projectId)
+                .map(work -> {
+                    int chapterCount = chapterRepository.countByWorkId(work.getId());
+                    return WorkResponse.from(work, chapterCount);
+                });
     }
 }

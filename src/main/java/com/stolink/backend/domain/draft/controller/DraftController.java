@@ -1,9 +1,11 @@
 package com.stolink.backend.domain.draft.controller;
 
-import com.stolink.backend.domain.draft.repository.DraftRepository;
-import com.stolink.backend.global.common.exception.ResourceNotFoundException;
+import com.stolink.backend.domain.draft.dto.DraftResponse;
+import com.stolink.backend.domain.draft.service.DraftService;
+import com.stolink.backend.global.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -13,18 +15,28 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DraftController {
 
-    private final DraftRepository draftRepository;
+    private final DraftService draftService;
+
+    /**
+     * Draft 조회 API
+     * Stolink에서 생성한 Draft 데이터 조회
+     */
+    @GetMapping("/{id}")
+    public ApiResponse<DraftResponse> getDraft(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        return ApiResponse.ok(draftService.findById(id, userId));
+    }
 
     /**
      * Draft 삭제 API
-     * 게시 취소 시 storead 프론트엔드에서 호출
+     * 게시 완료 또는 취소 시 호출
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteDraft(@PathVariable UUID id) {
-        int deleted = draftRepository.deleteByIdAndReturnCount(id);
-        if (deleted == 0) {
-            throw new ResourceNotFoundException("Draft를 찾을 수 없습니다: " + id);
-        }
+    public void deleteDraft(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        draftService.deleteById(id, userId);
     }
 }

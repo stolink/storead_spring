@@ -11,5 +11,14 @@ public enum Genre {
     DRAMA,
     COMEDY,
     HORROR,
-    OTHER
+    OTHER;
+
+    public static Genre from(String value) {
+        if (value == null) return OTHER;
+        try {
+            return Genre.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return OTHER;
+        }
+    }
 }

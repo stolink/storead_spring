@@ -1,7 +1,6 @@
 package com.stolink.backend.domain.work.dto;
 
 import com.stolink.backend.domain.work.entity.Genre;
-import com.stolink.backend.domain.work.entity.WorkStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -22,7 +21,7 @@ public class CreateWorkRequest {
     @NotNull(message = "장르는 필수입니다")
     private Genre genre;
 
-    private WorkStatus status;
+    private com.stolink.backend.domain.work.entity.WorkStatus status;
 
-    private String characterGraphData;
+    private java.util.Map<String, Object> characterGraphData;
 }

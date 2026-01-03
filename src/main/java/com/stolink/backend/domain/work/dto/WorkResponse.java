@@ -2,7 +2,6 @@ package com.stolink.backend.domain.work.dto;
 
 import com.stolink.backend.domain.work.entity.Genre;
 import com.stolink.backend.domain.work.entity.Work;
-import com.stolink.backend.domain.work.entity.WorkStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,8 +19,8 @@ public class WorkResponse {
     private String synopsis;
     private String coverImageUrl;
     private Genre genre;
-    private WorkStatus status;
-    private String characterGraphData;
+    private com.stolink.backend.domain.work.entity.WorkStatus status;
+    private java.util.Map<String, Object> characterGraphData;
     private int chapterCount;
     private Long ratingSum;
     private Long ratingCount;
