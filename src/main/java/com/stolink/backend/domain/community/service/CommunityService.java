@@ -55,13 +55,7 @@ public class CommunityService {
         // 4. Chapter 생성
         Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle());
 
-        // 5. Work graphSnapshot 업데이트 (있는 경우)
-        if (draft.getGraphSnapshot() != null) {
-            work.update(null, null, null, null, null, draft.getGraphSnapshot());
-            workRepository.save(work);
-        }
-
-        // 6. Draft 삭제 (소유권 체크 포함)
+        // 5. Draft 삭제 (소유권 체크 포함)
         draftService.deleteById(request.getDraftId(), userId);
 
         log.info("Community publish completed: workId={}, chapterId={}", work.getId(), chapter.getId());
@@ -112,6 +106,7 @@ public class CommunityService {
                 .content(draft.getContent())
                 .chapterNumber(chapterNumber)
                 .documentId(draft.getDocumentId())
+                .graphSnapshot(draft.getGraphSnapshot())
                 .build();
 
         log.info("Created new chapter: workId={}, chapterNumber={}, title={}", 

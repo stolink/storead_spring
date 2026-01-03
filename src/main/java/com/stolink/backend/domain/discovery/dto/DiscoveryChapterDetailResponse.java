@@ -22,6 +22,7 @@ public class DiscoveryChapterDetailResponse {
     private boolean likedByMe;
     private UUID prevChapterId;
     private UUID nextChapterId;
+    private java.util.Map<String, Object> graphSnapshot;
     private LocalDateTime createdAt;
 
     public static DiscoveryChapterDetailResponse from(
@@ -42,6 +43,7 @@ public class DiscoveryChapterDetailResponse {
                 .likedByMe(likedByMe)
                 .prevChapterId(prevChapterId)
                 .nextChapterId(nextChapterId)
+                .graphSnapshot(chapter.getGraphSnapshot())
                 .createdAt(chapter.getCreatedAt())
                 .build();
     }

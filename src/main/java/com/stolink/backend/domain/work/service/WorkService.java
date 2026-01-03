@@ -54,7 +54,6 @@ public class WorkService {
                 .coverImageUrl(request.getCoverImageUrl())
                 .genre(request.getGenre())
                 .status(request.getStatus() != null ? request.getStatus() : WorkStatus.ONGOING)
-                .characterGraphData(request.getCharacterGraphData())
                 .build();
 
         Work saved = workRepository.save(work);
@@ -71,8 +70,7 @@ public class WorkService {
                 request.getSynopsis(),
                 request.getCoverImageUrl(),
                 request.getGenre(),
-                request.getStatus(),
-                request.getCharacterGraphData()
+                request.getStatus()
         );
 
         int chapterCount = chapterRepository.countByWorkId(workId);

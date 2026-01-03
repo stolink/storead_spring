@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -17,6 +18,7 @@ public class ChapterDetailResponse {
     private String content;
     private Integer chapterNumber;
     private Long viewCount;
+    private Map<String, Object> graphSnapshot;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -28,6 +30,7 @@ public class ChapterDetailResponse {
                 .content(chapter.getContent())
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
+                .graphSnapshot(chapter.getGraphSnapshot())
                 .createdAt(chapter.getCreatedAt())
                 .updatedAt(chapter.getUpdatedAt())
                 .build();
