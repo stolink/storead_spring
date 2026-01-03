@@ -64,6 +64,9 @@ public class Draft {
     @Column(name = "work_cover_url")
     private String workCoverUrl;
 
+    @Column(name = "publish_status")
+    private String publishStatus;
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
