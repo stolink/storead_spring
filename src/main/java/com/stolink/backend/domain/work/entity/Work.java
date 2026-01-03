@@ -2,12 +2,9 @@ package com.stolink.backend.domain.work.entity;
 
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.global.common.entity.BaseEntity;
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -44,10 +41,6 @@ public class Work extends BaseEntity {
     @Builder.Default
     private WorkStatus status = WorkStatus.ONGOING;
 
-    @Type(JsonType.class)
-    @Column(name = "character_graph_data", columnDefinition = "jsonb")
-    private Map<String, Object> characterGraphData;
-
     @Column(name = "project_id", unique = true)
     private String projectId;
 
@@ -59,13 +52,12 @@ public class Work extends BaseEntity {
     @Builder.Default
     private Long ratingCount = 0L;
 
-    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status, Map<String, Object> characterGraphData) {
+    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status) {
         if (title != null) this.title = title;
         if (synopsis != null) this.synopsis = synopsis;
         if (coverImageUrl != null) this.coverImageUrl = coverImageUrl;
         if (genre != null) this.genre = genre;
         if (status != null) this.status = status;
-        if (characterGraphData != null) this.characterGraphData = characterGraphData;
     }
 
     public void addRating(int score) {

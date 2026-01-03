@@ -2,9 +2,12 @@ package com.stolink.backend.domain.chapter.entity;
 
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.global.common.entity.BaseEntity;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +40,10 @@ public class Chapter extends BaseEntity {
 
     @Column(name = "document_id", length = 255)
     private String documentId;
+
+    @Type(JsonType.class)
+    @Column(name = "graph_snapshot", columnDefinition = "jsonb")
+    private Map<String, Object> graphSnapshot;
 
     @Column(nullable = false)
     @Builder.Default
