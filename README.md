@@ -7,14 +7,16 @@
 - **Spring Boot**: 3.4.1
 - **Java**: 21 (AWS Amazon Corretto)
 - **Database**: PostgreSQL 16.11
+- **Authentication**: Spring Security + JWT + Google OAuth2
 
 ## 주요 기능
 
 ### 1. 인증 (Auth)
 
-- 간단한 헤더 기반 인증 (`X-User-Id`)
-- 회원가입, 로그인
-- 프로필 관리
+- JWT 토큰 기반 인증 (stolink_spring과 공유)
+- Google OAuth2 소셜 로그인
+- Access Token / Refresh Token 관리 (쿠키 기반)
+- 회원가입, 로그인, 프로필 관리
 
 ### 2. 작품 관리 (Works) - 작가용
 
@@ -49,6 +51,10 @@
 - 챕터별 읽은 위치 저장
 - 이어읽기 지원
 
+### 8. 드래프트 (Draft)
+
+- 임시저장 원고 관리
+
 ## 시작하기
 
 ### 사전 요구사항
@@ -56,26 +62,46 @@
 - Java 21+
 - Docker & Docker Compose
 
-### 1. Docker로 전체 실행 (권장)
+### 1. 로컬 개발 (권장)
+
+StoRead는 StoLink와 인프라(PostgreSQL, Neo4j)를 공유합니다.
 
 ```bash
-docker-compose up -d --build
+# 1. stolink_spring 먼저 실행 (PostgreSQL, Neo4j 제공)
+cd ../stolink_spring
+docker-compose -f docker-compose.local.yml up -d
+
+# 2. storead_spring 실행
+cd ../storead_spring
+docker-compose -f docker-compose.local.yml up --build -d
 ```
 
 다음 서비스가 시작됩니다:
 
-- **Spring Boot Backend**: `localhost:8080`
-- **PostgreSQL**: `localhost:5432`
+- **StoRead Backend**: `localhost:8081`
+- **StoLink Backend**: `localhost:8080` (stolink_spring)
+- **PostgreSQL**: `localhost:5432` (stolink_spring 제공)
+- **Neo4j**: `localhost:7687` (stolink_spring 제공)
 
-### 2. 로컬 개발 (데이터베이스만 Docker)
+### 2. IDE에서 직접 실행
 
 ```bash
-# 데이터베이스만 시작
-docker-compose up -d postgres
+# 데이터베이스 컨테이너 실행 (stolink_spring)
+cd ../stolink_spring
+docker-compose -f docker-compose.local.yml up -d postgres neo4j
+
+# 환경변수 설정 (.env 파일 또는 IDE 환경변수)
+# 필수: JWT_SECRET (stolink_spring과 동일해야 함)
 
 # 백엔드 실행
 gradlew.bat bootRun  # Windows
 ./gradlew bootRun    # Linux/Mac
+```
+
+### 3. 프로덕션/스테이징 배포
+
+```bash
+docker-compose up -d
 ```
 
 ## 프로젝트 구조
@@ -85,6 +111,7 @@ src/main/java/com/stolink/backend/
 ├── global/
 │   ├── common/         # 공통 DTO, 엔티티, 예외
 │   ├── config/         # 설정 (CORS, JPA)
+│   ├── security/       # JWT 인증, Spring Security
 │   └── util/           # 유틸리티
 ├── domain/
 │   ├── user/           # 사용자 인증
@@ -95,7 +122,8 @@ src/main/java/com/stolink/backend/
 │   ├── rating/         # 챕터 별점
 │   ├── library/        # 선호 작품 관리
 │   ├── bookmark/       # 북마크/이어읽기
-│   └── discovery/      # 작품 탐색 (Public)
+│   ├── discovery/      # 작품 탐색 (Public)
+│   └── draft/          # 임시저장 원고
 └── BackendApplication.java
 ```
 
@@ -105,8 +133,15 @@ src/main/java/com/stolink/backend/
 
 - `POST /api/auth/register` - 회원가입
 - `POST /api/auth/login` - 로그인
+- `POST /api/auth/refresh` - Access Token 갱신
+- `POST /api/auth/logout` - 로그아웃
 - `GET /api/auth/me` - 내 정보 조회
 - `PATCH /api/auth/me` - 프로필 수정
+
+### OAuth2 (Google)
+
+- `GET /oauth2/authorization/google` - Google 로그인 시작
+- `GET /login/oauth2/code/google` - OAuth2 콜백
 
 ### 작품 (작가용)
 
@@ -161,6 +196,28 @@ src/main/java/com/stolink/backend/
 - `GET /api/bookmarks/{chapterId}` - 북마크 조회
 - `POST /api/bookmarks/{chapterId}` - 북마크 저장/수정
 - `GET /api/works/{workId}/reading-progress` - 작품별 읽기 진행도
+
+## 환경 변수
+
+### 필수
+
+| 변수명                 | 설명                                       |
+| ---------------------- | ------------------------------------------ |
+| `JWT_SECRET`           | JWT 서명 키 (stolink_spring과 동일해야 함) |
+| `POSTGRESQL_URL`       | PostgreSQL 호스트                          |
+| `POSTGRESQL_PORT`      | PostgreSQL 포트 (기본: 5432)               |
+| `POSTGRESQL_USERNAME`  | PostgreSQL 사용자명                        |
+| `POSTGRESQL_PASSWORD`  | PostgreSQL 비밀번호                        |
+| `GOOGLE_CLIENT_ID`     | Google OAuth2 클라이언트 ID                |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 클라이언트 시크릿            |
+
+### 선택
+
+| 변수명                 | 설명                  | 기본값                                |
+| ---------------------- | --------------------- | ------------------------------------- |
+| `JWT_COOKIE_DOMAIN`    | JWT 쿠키 도메인       | localhost                             |
+| `CORS_ALLOWED_ORIGINS` | CORS 허용 origins     | http://localhost:3000,5173,5174       |
+| `OAUTH2_REDIRECT_URI`  | OAuth2 리다이렉트 URI | http://localhost:5174/oauth2/callback |
 
 ## 데이터베이스 스키마
 
@@ -270,44 +327,30 @@ erDiagram
 
 ### 테이블 설명
 
-| 테이블 | 설명 |
-|--------|------|
-| `users` | 사용자 정보 |
-| `works` | 작품 (제목, 줄거리, 표지, 장르, 연재상태, 별점 합계/개수) |
-| `chapters` | 챕터/회차 (본문, 순서, 조회수, 별점 합계/개수) |
-| `comments` | 댓글 (Self-referencing 구조, like_count 포함) |
-| `chapter_ratings` | 챕터 별점 (1~10점, 중복 방지) |
-| `comment_likes` | 댓글 좋아요 (중복 방지) |
-| `libraries` | 선호 작품 (내 서재) |
-| `bookmarks` | 읽은 위치 저장 |
+| 테이블            | 설명                                                      |
+| ----------------- | --------------------------------------------------------- |
+| `users`           | 사용자 정보                                               |
+| `works`           | 작품 (제목, 줄거리, 표지, 장르, 연재상태, 별점 합계/개수) |
+| `chapters`        | 챕터/회차 (본문, 순서, 조회수, 별점 합계/개수)            |
+| `comments`        | 댓글 (Self-referencing 구조, like_count 포함)             |
+| `chapter_ratings` | 챕터 별점 (1~10점, 중복 방지)                             |
+| `comment_likes`   | 댓글 좋아요 (중복 방지)                                   |
+| `libraries`       | 선호 작품 (내 서재)                                       |
+| `bookmarks`       | 읽은 위치 저장                                            |
 
-## 개발 시 주의사항
-
-### 인증
-
-현재는 간단한 헤더 기반(`X-User-Id`) 인증을 사용합니다.
-프로덕션에서는 JWT 또는 Spring Security 기반 인증으로 전환하세요.
-
-### 비밀번호
-
-현재 비밀번호를 해시하지 않고 평문으로 저장합니다.
-프로덕션에서는 반드시 BCrypt 등으로 해시하세요.
-
-### 챕터 순서 관리
+## 챕터 순서 관리
 
 - 삭제 시: 해당 작품의 더 큰 chapter_number를 가진 회차 번호 -1
 - 중간 삽입 시: 삽입 지점 이후 회차 번호 +1
 
-### 로컬 포트 설정 (TODO)
+## 포트 설정
 
-현재 기본 포트:
-- **Backend**: 8080
-- **PostgreSQL**: 5432
-
-로컬에서 StoLink 등 다른 Spring 서버, React 서버와 동시 실행 시 포트 충돌 방지를 위해 수정 필요.
-(EC2 배포 시에는 별도 인스턴스 사용 예정이므로 해당 없음)
+| 환경      | StoRead Backend      | StoLink Backend | PostgreSQL | Neo4j |
+| --------- | -------------------- | --------------- | ---------- | ----- |
+| 로컬 개발 | 8081                 | 8080            | 5432       | 7687  |
+| EC2 배포  | 8080 (별도 인스턴스) | 8080            | RDS        | -     |
 
 ## 관련 프로젝트
 
-- **StoLink**: 작가용 스토리 관리 플랫폼 (에디터)
-- **Frontend**: React + TypeScript
+- **[StoLink](../stolink_spring)**: 작가용 스토리 관리 플랫폼 (에디터, 인프라 제공)
+- **[StoRead Frontend](../storead_frontend)**: React + TypeScript 프론트엔드
