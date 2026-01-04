@@ -18,30 +18,29 @@ import java.util.UUID;
 
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    Optional<Payment> findByOrderId(String orderId);
+        Optional<Payment> findByOrderId(String orderId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Payment p WHERE p.orderId = :orderId")
-    Optional<Payment> findByOrderIdWithLock(@Param("orderId") String orderId);
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT p FROM Payment p WHERE p.orderId = :orderId")
+        Optional<Payment> findByOrderIdWithLock(@Param("orderId") String orderId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Payment p WHERE p.id = :id")
-    Optional<Payment> findByIdWithLock(@Param("id") UUID id);
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT p FROM Payment p WHERE p.id = :id")
+        Optional<Payment> findByIdWithLock(@Param("id") UUID id);
 
-    boolean existsByIdempotencyKey(String idempotencyKey);
+        boolean existsByIdempotencyKey(String idempotencyKey);
 
-    Page<Payment> findByUserIdOrderByRequestedAtDesc(UUID userId, Pageable pageable);
+        Page<Payment> findByUserIdOrderByRequestedAtDesc(UUID userId, Pageable pageable);
 
-    List<Payment> findByStatusInAndExpiredAtBefore(List<PaymentStatus> statuses, LocalDateTime expiredAt);
+        List<Payment> findByStatusInAndExpiredAtBefore(List<PaymentStatus> statuses, LocalDateTime expiredAt);
 
-    boolean existsByUserIdAndAmountAndStatusAndRequestedAtAfter(
-            UUID userId, Long amount, PaymentStatus status, LocalDateTime after);
+        boolean existsByUserIdAndAmountAndStatusAndRequestedAtAfter(
+                        UUID userId, Long amount, PaymentStatus status, LocalDateTime after);
 
-    @Modifying
-    @Query("UPDATE Payment p SET p.status = :targetStatus, p.updatedAt = :now WHERE p.status IN :sourceStatuses AND p.expiredAt < :expiredAt")
-    int updateStatusForExpiredPayments(
-            @Param("sourceStatuses") List<PaymentStatus> sourceStatuses,
-            @Param("targetStatus") PaymentStatus targetStatus,
-            @Param("expiredAt") LocalDateTime expiredAt,
-            @Param("now") LocalDateTime now);
+        @Modifying
+        @Query("UPDATE Payment p SET p.status = :targetStatus WHERE p.status IN :sourceStatuses AND p.expiredAt < :expiredAt")
+        int updateStatusForExpiredPayments(
+                        @Param("sourceStatuses") List<PaymentStatus> sourceStatuses,
+                        @Param("targetStatus") PaymentStatus targetStatus,
+                        @Param("expiredAt") LocalDateTime expiredAt);
 }

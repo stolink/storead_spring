@@ -35,7 +35,6 @@ public class PaymentScheduler {
         int updatedCount = paymentRepository.updateStatusForExpiredPayments(
                 List.of(PaymentStatus.PENDING, PaymentStatus.READY),
                 PaymentStatus.EXPIRED,
-                now,
                 now);
 
         if (updatedCount > 0) {
