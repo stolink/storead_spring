@@ -33,6 +33,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
 	// Security
 	implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -46,9 +49,10 @@ dependencies {
 	// PostgreSQL
 	runtimeOnly 'org.postgresql:postgresql'
 
-	// JSON
+	// JSON & JSONB Support
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+	implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.0'
 
 	// Hypersistence Utils (JSONB support)
 	implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.0'
