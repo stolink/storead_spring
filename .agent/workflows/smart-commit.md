@@ -51,10 +51,15 @@ git diff --staged --stat
 
 **변경사항이 있는 경우에만 실행**:
 
+> [!IMPORTANT] > **기능별 커밋 분할**: 한 번에 모든 변경사항을 하나의 커밋으로 묶지 마세요.
+> 논리적인 단위(기능별, 레이어별 등)로 커밋을 나누어 진행합니다. (예: Entity 추가, Service 구현, API 컨트롤러 추가 등을 각각의 커밋으로 분리)
+
 ```bash
 # Conventional Commit 메시지 생성 (diff 분석 기반)
 # Hook 실행을 위해 --no-verify 제거 (Lint/Type Check 수행)
 git commit -m "<type>: <설명>"
+
+# 모든 기능을 커밋할 때까지 위 과정을 반복한 후 푸시합니다.
 
 # 원격에 푸시
 # Hook 실행을 위해 --no-verify 제거 (Type Check 수행)
@@ -199,6 +204,7 @@ rm .pr_body_temp.md
 2. **PR 본문 없이 생성 금지** - 항상 `.pr_body_temp.md` 작성 후 생성
 3. **PR 존재 확인 필수** - gh pr view로 확인 후 생성/업데이트 결정
 4. **변경사항 없어도 PR 상태 확인** - 기존 PR이 있으면 업데이트 가능
+5. **원자적 커밋(Atomic Commit) 필수** - 하나의 커밋에는 하나의 논리적 변경만 포함되도록 기능별로 나누어 커밋합니다. (대규모 변경을 하나의 커밋으로 묶는 행위 금지)
 
 ---
 
