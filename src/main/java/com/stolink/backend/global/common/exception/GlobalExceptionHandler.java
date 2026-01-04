@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.stream.Collectors;
 
@@ -107,6 +108,18 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.<Void>builder()
                                                 .status(HttpStatus.BAD_REQUEST)
                                                 .message(message)
+                                                .build());
+        }
+
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(
+                        HttpMessageNotReadableException ex) {
+                log.error("Message not readable: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message("잘못된 요청 형식입니다. JSON 포맷을 확인해주세요.")
                                                 .build());
         }
 

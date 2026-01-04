@@ -15,12 +15,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/payments")
+@RequestMapping({ "/api/v1/payments", "/api/payments" })
 @RequiredArgsConstructor
 public class PaymentController {
 
@@ -31,7 +32,7 @@ public class PaymentController {
      */
     @PostMapping("/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> preparePayment(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody PaymentPrepareRequest request) {
         PaymentPrepareResponse response = paymentService.preparePayment(userId, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -42,7 +43,7 @@ public class PaymentController {
      */
     @PostMapping("/confirm")
     public ResponseEntity<ApiResponse<PaymentResponse>> confirmPayment(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody PaymentConfirmRequest request) {
         PaymentResponse response = paymentService.confirmPayment(userId, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -53,7 +54,7 @@ public class PaymentController {
      */
     @PostMapping("/{paymentId}/cancel")
     public ResponseEntity<ApiResponse<PaymentResponse>> cancelPayment(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable String paymentId,
             @Valid @RequestBody PaymentCancelRequest request) {
         PaymentResponse response = paymentService.cancelPayment(userId, paymentId, request);
@@ -65,7 +66,7 @@ public class PaymentController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<PaymentResponse>>> getPayments(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<PaymentResponse> response = paymentService.getPayments(userId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -76,7 +77,7 @@ public class PaymentController {
      */
     @GetMapping("/{paymentId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @PathVariable String paymentId) {
         PaymentResponse response = paymentService.getPayment(userId, paymentId);
         return ResponseEntity.ok(ApiResponse.ok(response));

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class CreditController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<CreditResponse>> getCredit(
-            @RequestHeader("X-User-Id") UUID userId) {
+            @AuthenticationPrincipal UUID userId) {
         CreditResponse response = creditService.getCredit(userId);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
@@ -39,7 +40,7 @@ public class CreditController {
      */
     @PostMapping("/use")
     public ResponseEntity<ApiResponse<CreditResponse>> useCredit(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody CreditUseRequest request) {
         CreditResponse response = creditService.useCredit(userId, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -50,7 +51,7 @@ public class CreditController {
      */
     @GetMapping("/check")
     public ResponseEntity<ApiResponse<CreditCheckResponse>> checkCredit(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam Long amount) {
         CreditCheckResponse response = creditService.checkCredit(userId, amount);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -61,12 +62,12 @@ public class CreditController {
      */
     @GetMapping("/transactions")
     public ResponseEntity<ApiResponse<Page<CreditTransactionResponse>>> getTransactions(
-            @RequestHeader("X-User-Id") UUID userId,
+            @AuthenticationPrincipal UUID userId,
             @RequestParam(required = false) CreditTransactionType type,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<CreditTransactionResponse> response = type != null
-            ? creditService.getTransactionsByType(userId, type, pageable)
-            : creditService.getTransactions(userId, pageable);
+                ? creditService.getTransactionsByType(userId, type, pageable)
+                : creditService.getTransactions(userId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }
