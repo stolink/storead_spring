@@ -53,7 +53,7 @@ public class TossPaymentClient {
                             "amount", amount))
                     .retrieve()
                     .bodyToMono(TossPaymentConfirmResponse.class)
-                    .block(Duration.ofSeconds(10));
+                    .block(Duration.ofSeconds(5));
         } catch (WebClientResponseException e) {
             log.error("토스 결제 승인 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw parseTossError(e);
@@ -77,7 +77,7 @@ public class TossPaymentClient {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(TossPaymentCancelResponse.class)
-                    .block(Duration.ofSeconds(10));
+                    .block(Duration.ofSeconds(5));
         } catch (WebClientResponseException e) {
             log.error("토스 결제 취소 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw parseTossError(e);
@@ -94,7 +94,7 @@ public class TossPaymentClient {
                     .header(HttpHeaders.AUTHORIZATION, buildAuthorizationHeader())
                     .retrieve()
                     .bodyToMono(TossPaymentResponse.class)
-                    .block(Duration.ofSeconds(10));
+                    .block(Duration.ofSeconds(5));
         } catch (WebClientResponseException e) {
             throw parseTossError(e);
         }
