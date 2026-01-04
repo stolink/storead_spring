@@ -37,18 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
-        if (request.getRequestURI().endsWith("/api/auth/me")
-                || request.getRequestURI().endsWith("/api/payments/confirm")) {
-            log.info("DEBUG: Processing {}", request.getRequestURI());
-            if (request.getCookies() != null) {
-                for (jakarta.servlet.http.Cookie c : request.getCookies()) {
-                    log.info("DEBUG Cookie: {} = {}...", c.getName(),
-                            c.getValue().length() > 10 ? c.getValue().substring(0, 10) : c.getValue());
-                }
-            } else {
-                log.info("DEBUG: No cookies found");
-            }
-        }
+
         try {
             String jwt = resolveToken(request);
 
