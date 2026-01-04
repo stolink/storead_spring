@@ -29,12 +29,10 @@ public class PaymentScheduler {
      * 만료된 결제 처리 (1분마다 실행)
      */
     @Scheduled(fixedRate = 60000)
-    @Transactional
     public void expireOldPayments() {
         List<Payment> expiredPayments = paymentRepository.findByStatusInAndExpiredAtBefore(
-            List.of(PaymentStatus.PENDING, PaymentStatus.READY),
-            LocalDateTime.now()
-        );
+                List.of(PaymentStatus.PENDING, PaymentStatus.READY),
+                LocalDateTime.now());
 
         if (!expiredPayments.isEmpty()) {
             for (Payment payment : expiredPayments) {
@@ -50,11 +48,9 @@ public class PaymentScheduler {
      * 실패한 웹훅 재시도 (5분마다 실행)
      */
     @Scheduled(fixedRate = 300000)
-    @Transactional
     public void retryFailedWebhooks() {
         List<PaymentWebhookLog> failedLogs = webhookLogRepository.findByStatusAndRetryCountLessThan(
-            WebhookStatus.FAILED, 3
-        );
+                WebhookStatus.FAILED, 3);
 
         if (!failedLogs.isEmpty()) {
             for (PaymentWebhookLog log : failedLogs) {
@@ -62,12 +58,12 @@ public class PaymentScheduler {
                     paymentService.handleWebhook(log.getEventType(), log.getRequestBody());
                     log.markAsProcessed();
                     this.log.info("웹훅 재시도 성공: paymentKey={}, eventType={}",
-                        log.getPaymentKey(), log.getEventType());
+                            log.getPaymentKey(), log.getEventType());
                 } catch (Exception e) {
                     log.incrementRetryCount();
                     log.setNextRetryAt(LocalDateTime.now().plusMinutes(5 * log.getRetryCount()));
                     this.log.error("웹훅 재시도 실패: paymentKey={}, retryCount={}, error={}",
-                        log.getPaymentKey(), log.getRetryCount(), e.getMessage());
+                            log.getPaymentKey(), log.getRetryCount(), e.getMessage());
                 }
                 webhookLogRepository.save(log);
             }

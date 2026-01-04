@@ -21,8 +21,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,8 +38,9 @@ public class PaymentService {
     private final CreditRepository creditRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final PaymentWebhookLogRepository webhookLogRepository;
-    private final TossPaymentClient tossPaymentClient;
     private final CreditPackageService creditPackageService;
+    private final TransactionTemplate transactionTemplate;
+    private final TossPaymentClient tossPaymentClient;
 
     /**
      * 결제 준비 (주문 생성)
@@ -79,24 +82,36 @@ public class PaymentService {
     }
 
     /**
-     * 결제 승인
+     * 결제 승인 (트랜잭션 분리: 외부 API 호출 최소화)
      */
-    @Transactional
     public PaymentResponse confirmPayment(UUID userId, PaymentConfirmRequest request) {
-        Payment payment = paymentRepository.findByOrderIdWithLock(request.orderId())
-                .orElseThrow(
-                        () -> new PaymentExceptions.PaymentNotFoundException("주문을 찾을 수 없습니다: " + request.orderId()));
+        // 1. (TX1) 결제 정보 조회 및 검증, 상태 변경 (READY -> IN_PROGRESS)
+        Payment payment = transactionTemplate.execute(status -> {
+            Payment p = paymentRepository.findByOrderIdWithLock(request.orderId())
+                    .orElseThrow(() -> new PaymentExceptions.PaymentNotFoundException(
+                            "주문을 찾을 수 없습니다: " + request.orderId()));
 
-        validatePaymentOwner(payment, userId);
-        validatePaymentStatus(payment);
-        validatePaymentAmount(payment, request.amount());
-        validateNotExpired(payment);
+            validatePaymentOwner(p, userId);
+            validatePaymentAmount(p, request.amount());
+            validateNotExpired(p);
 
-        if (payment.isCompleted()) {
-            log.info("이미 완료된 결제: orderId={}", request.orderId());
+            if (p.isCompleted()) {
+                return p;
+            }
+
+            // 상태가 이미 IN_PROGRESS여도 재시도 가능하도록 허용하거나 검증
+            if (!p.isCompleted() && p.getStatus() != PaymentStatus.IN_PROGRESS) {
+                p.markAsInProgress(request.paymentKey());
+                paymentRepository.save(p);
+            }
+            return p;
+        });
+
+        if (payment != null && payment.isCompleted()) {
             return PaymentResponse.from(payment);
         }
 
+        // 2. (Non-TX) 토스 API 호출
         TossPaymentConfirmResponse tossResponse;
         try {
             tossResponse = tossPaymentClient.confirmPayment(
@@ -104,96 +119,123 @@ public class PaymentService {
                     request.orderId(),
                     request.amount());
         } catch (TossPaymentException e) {
-            payment.fail(e.getErrorCode(), e.getMessage());
-            paymentRepository.save(payment);
+            // 3. (TX2-Fail) 실패 처리
+            transactionTemplate.executeWithoutResult(status -> {
+                Payment p = paymentRepository.findByOrderIdWithLock(request.orderId()).orElse(null);
+                if (p != null) {
+                    p.fail(e.getErrorCode(), e.getMessage());
+                    paymentRepository.save(p);
+                }
+            });
             throw e;
         }
 
-        payment.approve(request.paymentKey(), tossResponse.method());
-        paymentRepository.save(payment);
+        // 4. (TX2-Success) 성공 처리 및 크레딧 지급
+        return transactionTemplate.execute(status -> {
+            Payment p = paymentRepository.findByOrderIdWithLock(request.orderId()).orElseThrow();
+            if (p.isCompleted()) {
+                return PaymentResponse.from(p);
+            }
 
-        Credit credit = getOrCreateCredit(userId);
-        Long balanceBefore = credit.getBalance();
-        credit.charge(payment.getCreditAmount());
-        creditRepository.save(credit);
+            p.approve(request.paymentKey(), tossResponse.method());
+            paymentRepository.save(p);
 
-        CreditTransaction transaction = CreditTransaction.createChargeTransaction(
-                userId,
-                credit.getId(),
-                payment.getId(),
-                payment.getCreditAmount(),
-                balanceBefore,
-                String.format("%s 결제", payment.getOrderName()));
-        creditTransactionRepository.save(transaction);
+            Credit credit = getOrCreateCredit(userId);
+            Long balanceBefore = credit.getBalance();
+            credit.charge(p.getCreditAmount());
+            creditRepository.save(credit);
 
-        log.info("결제 승인 완료: orderId={}, paymentKey={}, creditAmount={}",
-                request.orderId(), request.paymentKey(), payment.getCreditAmount());
+            CreditTransaction transaction = CreditTransaction.createChargeTransaction(
+                    userId,
+                    credit.getId(),
+                    p.getId(),
+                    p.getCreditAmount(),
+                    balanceBefore,
+                    String.format("%s 결제", p.getOrderName()));
+            creditTransactionRepository.save(transaction);
 
-        return PaymentResponse.from(payment);
+            log.info("결제 승인 완료: orderId={}, paymentKey={}, creditAmount={}",
+                    request.orderId(), request.paymentKey(), p.getCreditAmount());
+
+            return PaymentResponse.from(p);
+        });
     }
 
     /**
-     * 결제 취소
+     * 결제 취소 (트랜잭션 분리)
      */
-    @Transactional
     public PaymentResponse cancelPayment(UUID userId, String paymentId, PaymentCancelRequest request) {
-        Payment payment = paymentRepository.findByIdWithLock(UUID.fromString(paymentId))
-                .orElseThrow(() -> new PaymentExceptions.PaymentNotFoundException("결제를 찾을 수 없습니다: " + paymentId));
-
-        validatePaymentOwner(payment, userId);
-        if (!payment.getStatus().isCancelable()) {
-            throw new PaymentExceptions.PaymentNotCancelableException("취소할 수 없는 결제 상태입니다: " + payment.getStatus());
+        // 1. (TX1) 검증 및 데이터 준비
+        record CancelContext(Payment payment, Long cancelAmount, Long creditToDeduct, Credit credit) {
         }
+        CancelContext ctx = transactionTemplate.execute(status -> {
+            Payment p = paymentRepository.findByIdWithLock(UUID.fromString(paymentId))
+                    .orElseThrow(() -> new PaymentExceptions.PaymentNotFoundException("결제를 찾을 수 없습니다: " + paymentId));
 
-        Long cancelAmount = request.cancelAmount() != null
-                ? request.cancelAmount()
-                : payment.getCancelableAmount();
+            validatePaymentOwner(p, userId);
+            if (!p.getStatus().isCancelable()) {
+                throw new PaymentExceptions.PaymentNotCancelableException("취소할 수 없는 결제 상태입니다: " + p.getStatus());
+            }
 
-        if (cancelAmount > payment.getCancelableAmount()) {
-            throw new PaymentExceptions.InvalidCancelAmountException(
-                    String.format("취소 가능 금액 초과: 요청=%d, 가능=%d", cancelAmount, payment.getCancelableAmount()));
-        }
+            Long cancelAmt = request.cancelAmount() != null
+                    ? request.cancelAmount()
+                    : p.getCancelableAmount();
 
-        Long creditToDeduct = calculateCreditToDeduct(payment, cancelAmount);
+            if (cancelAmt > p.getCancelableAmount()) {
+                throw new PaymentExceptions.InvalidCancelAmountException(
+                        String.format("취소 가능 금액 초과: 요청=%d, 가능=%d", cancelAmt, p.getCancelableAmount()));
+            }
 
-        Credit credit = creditRepository.findByUserIdWithLock(userId)
-                .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException("크레딧 정보를 찾을 수 없습니다."));
+            Long creditToDed = calculateCreditToDeduct(p, cancelAmt);
 
-        if (credit.getBalance() < creditToDeduct) {
-            throw new PaymentExceptions.InsufficientCreditException(
-                    String.format("환불할 크레딧이 부족합니다. 잔액=%d, 필요=%d", credit.getBalance(), creditToDeduct));
-        }
+            Credit c = creditRepository.findByUserIdWithLock(userId)
+                    .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException("크레딧 정보를 찾을 수 없습니다."));
 
+            if (c.getBalance() < creditToDed) {
+                throw new PaymentExceptions.InsufficientCreditException(
+                        String.format("환불할 크레딧이 부족합니다. 잔액=%d, 필요=%d", c.getBalance(), creditToDed));
+            }
+
+            return new CancelContext(p, cancelAmt, creditToDed, c);
+        });
+
+        // 2. (Non-TX) 토스 API 호출
         try {
             tossPaymentClient.cancelPayment(
-                    payment.getPaymentKey(),
+                    ctx.payment().getPaymentKey(),
                     request.cancelReason(),
-                    cancelAmount);
+                    ctx.cancelAmount());
         } catch (TossPaymentException e) {
-            log.error("토스 결제 취소 실패: paymentKey={}, error={}", payment.getPaymentKey(), e.getMessage());
+            log.error("토스 결제 취소 실패: paymentKey={}, error={}", ctx.payment().getPaymentKey(), e.getMessage());
             throw e;
         }
 
-        payment.cancel(cancelAmount, request.cancelReason());
-        paymentRepository.save(payment);
+        // 3. (TX2) 성공 결과 반영 및 크레딧 차감
+        return transactionTemplate.execute(status -> {
+            Payment p = paymentRepository.findByIdWithLock(ctx.payment().getId()).orElseThrow();
+            Credit c = creditRepository.findByUserIdWithLock(userId).orElseThrow();
 
-        Long balanceBefore = credit.getBalance();
-        credit.cancelCharge(creditToDeduct);
-        creditRepository.save(credit);
+            p.cancel(ctx.cancelAmount(), request.cancelReason());
+            paymentRepository.save(p);
 
-        CreditTransaction transaction = CreditTransaction.createRefundTransaction(
-                userId,
-                credit.getId(),
-                payment.getId(),
-                creditToDeduct,
-                balanceBefore,
-                String.format("%s 결제 취소", payment.getOrderName()));
-        creditTransactionRepository.save(transaction);
+            Long balanceBefore = c.getBalance();
+            c.cancelCharge(ctx.creditToDeduct());
+            creditRepository.save(c);
 
-        log.info("결제 취소 완료: paymentId={}, cancelAmount={}, creditDeducted={}",
-                paymentId, cancelAmount, creditToDeduct);
+            CreditTransaction transaction = CreditTransaction.createCancelTransaction(
+                    userId,
+                    c.getId(),
+                    p.getId(),
+                    ctx.creditToDeduct(),
+                    balanceBefore,
+                    String.format("%s 결제 취소", p.getOrderName()));
+            creditTransactionRepository.save(transaction);
 
-        return PaymentResponse.from(payment);
+            log.info("결제 취소 처리 완료: orderId={}, cancelAmount={}, creditDeducted={}",
+                    p.getOrderId(), ctx.cancelAmount(), ctx.creditToDeduct());
+
+            return PaymentResponse.from(p);
+        });
     }
 
     /**
@@ -325,6 +367,14 @@ public class PaymentService {
         if (payment.getAmount() == null || payment.getAmount() == 0) {
             throw new PaymentExceptions.InvalidPaymentStateException("결제 금액이 올바르지 않습니다.");
         }
-        return (cancelAmount * payment.getCreditAmount()) / payment.getAmount();
+
+        // 정수 나눗셈에 의한 정밀도 손실 방지를 위해 BigDecimal 사용 (반올림 정책 적용)
+        BigDecimal bCancelAmount = BigDecimal.valueOf(cancelAmount);
+        BigDecimal bCreditAmount = BigDecimal.valueOf(payment.getCreditAmount());
+        BigDecimal bTotalAmount = BigDecimal.valueOf(payment.getAmount());
+
+        return bCancelAmount.multiply(bCreditAmount)
+                .divide(bTotalAmount, 0, RoundingMode.HALF_UP)
+                .longValue();
     }
 }
