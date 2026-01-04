@@ -16,7 +16,10 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: email, profile
-
+            redirect-uri: "{baseUrl}/api/login/oauth2/code/{registrationId}"
+toss:
+  payments:
+    secret-key: test_sk_Z61JOxRQVEGyxjQX6mDR8W0X9bAq
 # JWT Configuration (same secret as stolink_spring for shared auth)
 jwt:
   secret: ${JWT_SECRET:very-long-and-secure-random-secret-key-that-is-at-least-512-bits-for-hs512-algorithm-security-must-be-kept-secret}
@@ -37,6 +40,5 @@ app:
     base-path: ./storage/uploads
 
 # Server Configuration (Override for Local)
-# 로컬에서도 내부 포트는 8080 사용 (docker-compose에서 8081:8080으로 매핑)
 server:
-  port: 8080
+  port: 8081

@@ -88,8 +88,11 @@ public class DiscoveryController {
         @GetMapping("/chapters/{id}")
         public ApiResponse<DiscoveryChapterDetailResponse> getChapterDetail(
                         @PathVariable UUID id,
-                        // @RequestHeader("X-User-Id") UUID userId,
-                        @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+                        @AuthenticationPrincipal Object principal) {
+                UUID userId = null;
+                if (principal instanceof UUID) {
+                        userId = (UUID) principal;
+                }
                 DiscoveryChapterDetailResponse chapter = discoveryService.getChapterDetail(id, userId);
                 return ApiResponse.ok(chapter);
         }
