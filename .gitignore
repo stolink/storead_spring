@@ -32,3 +32,5 @@ logs/
 
 smart-commit-md.md
 bin/
+.bin/
+pr_comments.json
