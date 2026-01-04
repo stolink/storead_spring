@@ -29,18 +29,17 @@ public class PaymentScheduler {
      * 만료된 결제 처리 (1분마다 실행)
      */
     @Scheduled(fixedRate = 60000)
+    @Transactional
     public void expireOldPayments() {
-        List<Payment> expiredPayments = paymentRepository.findByStatusInAndExpiredAtBefore(
+        LocalDateTime now = LocalDateTime.now();
+        int updatedCount = paymentRepository.updateStatusForExpiredPayments(
                 List.of(PaymentStatus.PENDING, PaymentStatus.READY),
-                LocalDateTime.now());
+                PaymentStatus.EXPIRED,
+                now,
+                now);
 
-        if (!expiredPayments.isEmpty()) {
-            for (Payment payment : expiredPayments) {
-                payment.expire();
-                log.info("결제 만료 처리: orderId={}", payment.getOrderId());
-            }
-            paymentRepository.saveAll(expiredPayments);
-            log.info("만료된 결제 처리 완료: count={}", expiredPayments.size());
+        if (updatedCount > 0) {
+            log.info("만료된 결제 벌크 처리 완료: count={}", updatedCount);
         }
     }
 

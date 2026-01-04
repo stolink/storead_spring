@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,5 +35,13 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findByStatusInAndExpiredAtBefore(List<PaymentStatus> statuses, LocalDateTime expiredAt);
 
     boolean existsByUserIdAndAmountAndStatusAndRequestedAtAfter(
-        UUID userId, Long amount, PaymentStatus status, LocalDateTime after);
+            UUID userId, Long amount, PaymentStatus status, LocalDateTime after);
+
+    @Modifying
+    @Query("UPDATE Payment p SET p.status = :targetStatus, p.updatedAt = :now WHERE p.status IN :sourceStatuses AND p.expiredAt < :expiredAt")
+    int updateStatusForExpiredPayments(
+            @Param("sourceStatuses") List<PaymentStatus> sourceStatuses,
+            @Param("targetStatus") PaymentStatus targetStatus,
+            @Param("expiredAt") LocalDateTime expiredAt,
+            @Param("now") LocalDateTime now);
 }
