@@ -222,7 +222,7 @@ public class PaymentService {
             c.cancelCharge(ctx.creditToDeduct());
             creditRepository.save(c);
 
-            CreditTransaction transaction = CreditTransaction.createCancelTransaction(
+            CreditTransaction transaction = CreditTransaction.createRefundTransaction(
                     userId,
                     c.getId(),
                     p.getId(),
@@ -309,7 +309,7 @@ public class PaymentService {
     }
 
     private Credit getOrCreateCredit(UUID userId) {
-        return creditRepository.findByUserId(userId)
+        return creditRepository.findByUserIdWithLock(userId)
                 .orElseGet(() -> creditRepository.save(Credit.createForUser(userId)));
     }
 
