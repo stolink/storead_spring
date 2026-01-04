@@ -131,22 +131,29 @@ public class PaymentService {
         }
 
         // 4. (TX2-Success) 성공 처리 및 크레딧 지급
+        return completePaymentProcess(request.orderId(), request.paymentKey(), tossResponse.method());
+    }
+
+    private PaymentResponse completePaymentProcess(String orderId, String paymentKey, String method) {
         return transactionTemplate.execute(status -> {
-            Payment p = paymentRepository.findByOrderIdWithLock(request.orderId()).orElseThrow();
+            Payment p = paymentRepository.findByOrderIdWithLock(orderId)
+                    .orElseThrow(() -> new PaymentExceptions.PaymentNotFoundException("주문을 찾을 수 없습니다: " + orderId));
+
             if (p.isCompleted()) {
+                log.info("이미 처리된 결제입니다: orderId={}", orderId);
                 return PaymentResponse.from(p);
             }
 
-            p.approve(request.paymentKey(), tossResponse.method());
+            p.approve(paymentKey, method);
             paymentRepository.save(p);
 
-            Credit credit = getOrCreateCredit(userId);
+            Credit credit = getOrCreateCredit(p.getUserId());
             Long balanceBefore = credit.getBalance();
             credit.charge(p.getCreditAmount());
             creditRepository.save(credit);
 
             CreditTransaction transaction = CreditTransaction.createChargeTransaction(
-                    userId,
+                    p.getUserId(),
                     credit.getId(),
                     p.getId(),
                     p.getCreditAmount(),
@@ -154,9 +161,7 @@ public class PaymentService {
                     String.format("%s 결제", p.getOrderName()));
             creditTransactionRepository.save(transaction);
 
-            log.info("결제 승인 완료: orderId={}, paymentKey={}, creditAmount={}",
-                    request.orderId(), request.paymentKey(), p.getCreditAmount());
-
+            log.info("결제 승인 처리 완료: orderId={}, paymentKey={}, method={}", orderId, paymentKey, method);
             return PaymentResponse.from(p);
         });
     }
@@ -305,7 +310,21 @@ public class PaymentService {
     }
 
     private void handlePaymentStatusChanged(JsonNode payload) {
-        log.info("결제 상태 변경 웹훅 처리: {}", payload);
+        String status = payload.path("status").asText();
+        String orderId = payload.path("orderId").asText();
+        String paymentKey = payload.path("paymentKey").asText();
+        String method = payload.path("method").asText();
+
+        log.info("결제 상태 변경 웹훅 처리: orderId={}, status={}", orderId, status);
+
+        if ("DONE".equals(status)) {
+            try {
+                completePaymentProcess(orderId, paymentKey, method);
+            } catch (Exception e) {
+                log.error("웹훅 결제 완료 처리 실패: orderId={}, error={}", orderId, e.getMessage());
+                throw e;
+            }
+        }
     }
 
     private Credit getOrCreateCredit(UUID userId) {
