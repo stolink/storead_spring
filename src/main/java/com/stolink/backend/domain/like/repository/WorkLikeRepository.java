@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * 작품 좋아요 Repository
@@ -34,4 +36,10 @@ public interface WorkLikeRepository extends JpaRepository<WorkLike, UUID> {
      * 특정 작품의 총 좋아요 수 조회
      */
     long countByWorkId(UUID workId);
+
+    /**
+     * 여러 작품의 좋아요 수 배치 조회 (N+1 문제 해결)
+     */
+    @Query("SELECT wl.work.id, COUNT(wl) FROM WorkLike wl WHERE wl.work.id IN :workIds GROUP BY wl.work.id")
+    List<Object[]> countLikesByWorkIds(@Param("workIds") List<UUID> workIds);
 }

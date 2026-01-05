@@ -15,6 +15,7 @@ public class WorkResponse {
     private UUID id;
     private UUID authorId;
     private String authorNickname;
+    private String projectId; // stolink 프로젝트 ID (에디터 연결용)
     private String title;
     private String synopsis;
     private String coverImageUrl;
@@ -31,6 +32,7 @@ public class WorkResponse {
                 .id(work.getId())
                 .authorId(work.getAuthor().getId())
                 .authorNickname(work.getAuthor().getNickname())
+                .projectId(work.getProjectId())
                 .title(work.getTitle())
                 .synopsis(work.getSynopsis())
                 .coverImageUrl(work.getCoverImageUrl())
@@ -49,6 +51,7 @@ public class WorkResponse {
                 .id(work.getId())
                 .authorId(work.getAuthor().getId())
                 .authorNickname(work.getAuthor().getNickname())
+                .projectId(work.getProjectId())
                 .title(work.getTitle())
                 .synopsis(work.getSynopsis())
                 .coverImageUrl(work.getCoverImageUrl())
