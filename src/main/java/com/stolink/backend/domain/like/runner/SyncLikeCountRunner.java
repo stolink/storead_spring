@@ -23,11 +23,11 @@ public class SyncLikeCountRunner implements CommandLineRunner {
     private final WorkRepository workRepository;
 
     /**
-     * 좋아요 수 동기화 실행 여부 (기본값: true)
-     * 분산 환경에서는 하나의 인스턴스에서만 true로 설정
-     * 예: SYNC_LIKE_COUNT_ENABLED=false
+     * 좋아요 수 동기화 실행 여부 (기본값: false)
+     * - 주의: true로 설정 시 애플리케이션 시작 시 전체 Works 테이블에 락(Table Lock)을 유발할 수 있음.
+     * - 데이터가 많은 운영 환경에서는 false로 유지하고, 별도의 배치 작업이나 관리자 기능을 통해 실행 권장.
      */
-    @Value("${app.sync.like-count.enabled:true}")
+    @Value("${app.sync.like-count.enabled:false}")
     private boolean syncEnabled;
 
     @Override

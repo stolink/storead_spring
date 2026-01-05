@@ -90,7 +90,14 @@ public class RecommendationService {
                 }
 
                 // 2. 해당 장르의 작품 추천 (이미 읽은 작품 제외)
-                // 2. 해당 장르의 작품 추천 (이미 읽은 작품 제외)
+                if (readWorkIds.isEmpty()) {
+                        // 읽은 작품이 없으면 해당 장르의 인기작 추천
+                        return workRepository.findAllByGenre(topGenres.get(0), PageRequest.of(0, 10))
+                                        .stream()
+                                        .map(DiscoveryWorkResponse::from)
+                                        .collect(Collectors.toList());
+                }
+
                 // DB 레벨에서 필터링하여 정확한 페이지네이션 보장
                 return workRepository.findByGenreAndIdNotIn(topGenres.get(0), readWorkIds, PageRequest.of(0, 10))
                                 .stream()

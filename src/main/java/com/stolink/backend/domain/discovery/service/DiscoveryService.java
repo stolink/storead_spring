@@ -208,21 +208,12 @@ public class DiscoveryService {
         long likeCount = 0L;
         boolean likedByMe = false;
 
-        // 이전/다음 챕터
+        // 이전/다음 챕터 (전체 목록 조회 대신 단건 조회 쿼리 사용으로 최적화)
         UUID workId = chapter.getWork().getId();
-        List<Chapter> allChapters = chapterRepository.findByWorkIdOrderByChapterNumberAsc(workId);
+        int currentNumber = chapter.getChapterNumber();
 
-        UUID prevChapterId = null;
-        UUID nextChapterId = null;
-        for (int i = 0; i < allChapters.size(); i++) {
-            if (allChapters.get(i).getId().equals(chapterId)) {
-                if (i > 0)
-                    prevChapterId = allChapters.get(i - 1).getId();
-                if (i < allChapters.size() - 1)
-                    nextChapterId = allChapters.get(i + 1).getId();
-                break;
-            }
-        }
+        UUID prevChapterId = chapterRepository.findPrevChapterId(workId, currentNumber).orElse(null);
+        UUID nextChapterId = chapterRepository.findNextChapterId(workId, currentNumber).orElse(null);
 
         DiscoveryChapterDetailResponse response = DiscoveryChapterDetailResponse.from(chapter, likeCount, likedByMe,
                 prevChapterId, nextChapterId);

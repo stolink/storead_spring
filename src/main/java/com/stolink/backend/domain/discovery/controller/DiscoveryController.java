@@ -6,6 +6,7 @@ import com.stolink.backend.domain.discovery.dto.DiscoveryWorkResponse;
 import com.stolink.backend.domain.discovery.service.DiscoveryService;
 import com.stolink.backend.domain.discovery.service.RecommendationService;
 import com.stolink.backend.global.common.dto.ApiResponse;
+import com.stolink.backend.global.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,10 +32,7 @@ public class DiscoveryController {
         public ApiResponse<java.util.List<com.stolink.backend.domain.discovery.dto.ContinueReadingResponse>> getContinueReading(
                         @AuthenticationPrincipal Object principal) {
 
-                UUID userId = null;
-                if (principal instanceof UUID) {
-                        userId = (UUID) principal;
-                }
+                UUID userId = SecurityUtils.extractUserId(principal);
 
                 if (userId == null) {
                         return ApiResponse.ok(java.util.Collections.emptyList());
@@ -47,10 +45,7 @@ public class DiscoveryController {
         public ApiResponse<java.util.List<DiscoveryWorkResponse>> getRecommendations(
                         @AuthenticationPrincipal Object principal) {
 
-                UUID userId = null;
-                if (principal instanceof UUID) {
-                        userId = (UUID) principal;
-                }
+                UUID userId = SecurityUtils.extractUserId(principal);
 
                 if (userId == null) {
                         return ApiResponse.ok(java.util.Collections.emptyList());
@@ -151,7 +146,8 @@ public class DiscoveryController {
         @GetMapping("/works/{id}")
         public ApiResponse<DiscoveryWorkDetailResponse> getWorkDetail(
                         @PathVariable UUID id,
-                        @AuthenticationPrincipal UUID userId) {
+                        @AuthenticationPrincipal Object principal) {
+                UUID userId = SecurityUtils.extractUserId(principal);
                 DiscoveryWorkDetailResponse work = discoveryService.getWorkDetail(id, userId);
                 return ApiResponse.ok(work);
         }
@@ -160,10 +156,7 @@ public class DiscoveryController {
         public ApiResponse<DiscoveryChapterDetailResponse> getChapterDetail(
                         @PathVariable UUID id,
                         @AuthenticationPrincipal Object principal) {
-                UUID userId = null;
-                if (principal instanceof UUID) {
-                        userId = (UUID) principal;
-                }
+                UUID userId = SecurityUtils.extractUserId(principal);
                 DiscoveryChapterDetailResponse chapter = discoveryService.getChapterDetail(id, userId);
                 return ApiResponse.ok(chapter);
         }
