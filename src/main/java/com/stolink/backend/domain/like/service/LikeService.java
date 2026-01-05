@@ -90,6 +90,7 @@ public class LikeService {
         if (existingLike.isPresent()) {
             log.info("[LikeService] Found existing like. Deleting. userId: {}", userId);
             workLikeRepository.delete(existingLike.get());
+            work.removeLike(); // Count 감소
             liked = false;
         } else {
             log.info("[LikeService] Like NOT FOUND. Creating new. userId: {}", userId);
@@ -99,6 +100,7 @@ public class LikeService {
                     .build();
             try {
                 workLikeRepository.save(like);
+                work.addLike(); // Count 증가
                 log.info("[LikeService] Like saved.");
                 liked = true;
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
@@ -108,7 +110,9 @@ public class LikeService {
             }
         }
 
-        long likeCount = workLikeRepository.countByWorkId(workId);
+        // work는 Dirty Checking으로 자동 저장됨
+
+        long likeCount = work.getLikeCount();
         log.info("[LikeService] Final likeCount: {}, isLiked: {}", likeCount, liked);
         return LikeResponse.of(liked, likeCount);
     }
@@ -117,12 +121,11 @@ public class LikeService {
      * 특정 작품의 좋아요 상태 조회
      */
     public LikeResponse getWorkLikeStatus(UUID userId, UUID workId) {
-        if (!workRepository.existsById(workId)) {
-            throw new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId);
-        }
+        Work work = workRepository.findById(workId)
+                .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
         boolean liked = userId != null && workLikeRepository.existsByUserIdAndWorkId(userId, workId);
-        long likeCount = workLikeRepository.countByWorkId(workId);
+        long likeCount = work.getLikeCount();
         log.info("[LikeService] getWorkLikeStatus. workId: {}, userId: {} -> liked: {}", workId, userId, liked);
         return LikeResponse.of(liked, likeCount);
     }
