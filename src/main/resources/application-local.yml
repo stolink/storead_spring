@@ -31,6 +31,8 @@ jwt:
 # OAuth2 Redirect URI
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5174/oauth2/callback}
+  default-failure-url: http://localhost:5174/oauth2/callback
+  allowed-redirect-hosts: localhost
 
 # Application Configuration
 app:

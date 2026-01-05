@@ -3,6 +3,7 @@ package com.stolink.backend.global.security;
 import com.stolink.backend.global.security.jwt.JwtAuthenticationFilter;
 import com.stolink.backend.global.security.oauth2.CustomOAuth2UserService;
 import com.stolink.backend.global.security.oauth2.OAuth2SuccessHandler;
+import com.stolink.backend.global.security.oauth2.OAuth2FailureHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +35,7 @@ public class SecurityConfig {
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
         private final CustomOAuth2UserService customOAuth2UserService;
         private final OAuth2SuccessHandler oAuth2SuccessHandler;
+        private final OAuth2FailureHandler oAuth2FailureHandler;
 
         @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:5174}")
         private String allowedOrigins;
@@ -72,7 +74,8 @@ public class SecurityConfig {
                                                                 .baseUri("/api/login/oauth2/code/*"))
                                                 .userInfoEndpoint(userInfo -> userInfo
                                                                 .userService(customOAuth2UserService))
-                                                .successHandler(oAuth2SuccessHandler))
+                                                .successHandler(oAuth2SuccessHandler)
+                                                .failureHandler(oAuth2FailureHandler))
 
                                 .exceptionHandling(exception -> exception
                                                 .authenticationEntryPoint(
