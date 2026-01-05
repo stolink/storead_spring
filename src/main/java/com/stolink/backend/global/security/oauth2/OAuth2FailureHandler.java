@@ -22,24 +22,22 @@ import java.util.List;
  * 
  * 보안 고려사항:
  * - 내부 예외 메시지를 클라이언트에 노출하지 않음
- * - 시스템 정의 에러 코드만 전달
+ * - 시스템 정의 에러 코드만 전달 (OAuth2ErrorCode Enum)
  * - Redirect URI 화이트리스트 검증으로 Open Redirect 방지
+ * - 호스트 비교 시 대소문자 구분하지 않음
  */
 @Slf4j
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
-    // 시스템 정의 에러 코드 (클라이언트에 안전하게 노출 가능)
-    private static final String ERROR_CODE_AUTH_FAILED = "AUTH_FAILED";
-    private static final String ERROR_CODE_INVALID_TOKEN = "INVALID_TOKEN";
-    private static final String ERROR_CODE_ACCESS_DENIED = "ACCESS_DENIED";
-    private static final String ERROR_CODE_SERVER_ERROR = "SERVER_ERROR";
-
-    @Value("${oauth2.redirect-uri:http://localhost:5174/oauth2/callback}")
+    @Value("${oauth2.redirect-uri}")
     private String redirectUri;
 
-    // 허용된 리다이렉트 도메인 화이트리스트
-    @Value("${oauth2.allowed-redirect-hosts:localhost}")
+    @Value("${oauth2.default-failure-url:http://localhost:5174/oauth2/callback}")
+    private String defaultFailureUrl;
+
+    // 허용된 리다이렉트 도메인 화이트리스트 (환경별 필수 설정 필요)
+    @Value("${oauth2.allowed-redirect-hosts}")
     private List<String> allowedRedirectHosts;
 
     @Override
@@ -51,7 +49,7 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         log.error("Exception Type: {}", exception.getClass().getSimpleName());
         log.error("Error Message: {}", exception.getMessage());
 
-        String errorCode = ERROR_CODE_AUTH_FAILED;
+        OAuth2ErrorCode errorCode = OAuth2ErrorCode.AUTH_FAILED;
 
         if (exception instanceof OAuth2AuthenticationException oauthException) {
             String oauthErrorCode = oauthException.getError().getErrorCode();
@@ -60,7 +58,7 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
             log.error("OAuth2 Error URI: {}", oauthException.getError().getUri());
 
             // OAuth2 에러 코드를 시스템 에러 코드로 매핑
-            errorCode = mapToSystemErrorCode(oauthErrorCode);
+            errorCode = OAuth2ErrorCode.fromOAuthErrorCode(oauthErrorCode);
         }
 
         // Request 정보 로깅 (디버깅용)
@@ -78,9 +76,10 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         String validatedRedirectUri = validateAndGetRedirectUri();
 
         // 3. 프론트엔드로 시스템 에러 코드와 함께 리다이렉트
-        // UriComponentsBuilder가 자동으로 RFC 3986 인코딩을 수행함
+        // encode()를 명시적으로 호출하여 특수 문자 처리 안정성 확보
         String targetUrl = UriComponentsBuilder.fromUriString(validatedRedirectUri)
-                .queryParam("error", errorCode)
+                .queryParam("error", errorCode.getCode())
+                .encode()
                 .build()
                 .toUriString();
 
@@ -88,42 +87,29 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
     }
 
     /**
-     * OAuth2 에러 코드를 시스템 정의 에러 코드로 매핑
-     * 내부 에러 정보를 숨기고 안전한 에러 코드만 반환
-     */
-    private String mapToSystemErrorCode(String oauthErrorCode) {
-        if (oauthErrorCode == null) {
-            return ERROR_CODE_AUTH_FAILED;
-        }
-
-        return switch (oauthErrorCode.toLowerCase()) {
-            case "invalid_token", "invalid_grant", "invalid_request" -> ERROR_CODE_INVALID_TOKEN;
-            case "access_denied", "unauthorized_client" -> ERROR_CODE_ACCESS_DENIED;
-            case "server_error", "temporarily_unavailable" -> ERROR_CODE_SERVER_ERROR;
-            default -> ERROR_CODE_AUTH_FAILED;
-        };
-    }
-
-    /**
      * Redirect URI 검증 및 반환
      * 허용된 호스트 목록에 포함된 경우에만 해당 URI 반환
-     * 검증 실패 시 기본 리다이렉트 URI 반환
+     * 호스트 비교 시 대소문자를 구분하지 않음 (RFC 3986)
+     * 검증 실패 시 설정된 기본 실패 URL 반환
      */
     private String validateAndGetRedirectUri() {
         try {
             URI uri = URI.create(redirectUri);
             String host = uri.getHost();
 
-            if (host != null && allowedRedirectHosts.contains(host)) {
+            // 대소문자 구분 없이 호스트 비교 (HTTP 호스트명은 대소문자 구분하지 않음)
+            if (host != null && allowedRedirectHosts.stream()
+                    .anyMatch(allowedHost -> allowedHost.equalsIgnoreCase(host))) {
                 return redirectUri;
             }
 
-            log.warn("Redirect URI host '{}' is not in allowed list. Using default.", host);
+            log.warn("Redirect URI host '{}' is not in allowed list {}. Using default failure URL.",
+                    host, allowedRedirectHosts);
         } catch (IllegalArgumentException e) {
             log.error("Invalid redirect URI format: {}", redirectUri, e);
         }
 
-        // 검증 실패 시 안전한 기본값 반환
-        return "http://localhost:5174/oauth2/callback";
+        // 검증 실패 시 설정된 기본 실패 URL 반환
+        return defaultFailureUrl;
     }
 }

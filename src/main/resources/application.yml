@@ -44,8 +44,6 @@ logging:
     com.stolink: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.security.oauth2: DEBUG
 
 # Toss Payments Configuration
 toss:
