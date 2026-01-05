@@ -31,11 +31,95 @@ public class DiscoveryService {
     private final LibraryRepository libraryRepository;
 
     /**
-     * 작품 목록 조회 (N+1 문제 해결 - 배치 조회)
+     * 작품 목록 조회 (필터링 지원)
      */
-    public Page<DiscoveryWorkResponse> getWorks(Pageable pageable) {
-        Page<Work> workPage = workRepository.findAll(pageable);
+    public Page<DiscoveryWorkResponse> getWorks(List<String> genres, String status, Pageable pageable) {
+        org.springframework.data.jpa.domain.Specification<Work> spec = (root, query, criteriaBuilder) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+
+            // 장르 필터
+            if (genres != null && !genres.isEmpty()) {
+                List<com.stolink.backend.domain.work.entity.Genre> genreEnums = genres.stream()
+                        .map(com.stolink.backend.domain.work.entity.Genre::from)
+                        .collect(Collectors.toList());
+                predicates.add(root.get("genre").in(genreEnums));
+            }
+
+            // 상태 필터 (ONGOING, COMPLETED)
+            if (status != null && !status.isEmpty()) {
+                try {
+                    com.stolink.backend.domain.work.entity.WorkStatus statusEnum = com.stolink.backend.domain.work.entity.WorkStatus
+                            .valueOf(status.toUpperCase());
+                    predicates.add(criteriaBuilder.equal(root.get("status"), statusEnum));
+                } catch (IllegalArgumentException e) {
+                    // Ignore invalid status
+                }
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Work> workPage = workRepository.findAll(spec, pageable);
         return convertToResponse(workPage);
+    }
+
+    /**
+     * 랭킹 조회
+     */
+    public Page<DiscoveryWorkResponse> getRankings(String period, String genre, Pageable pageable) {
+        Page<Work> workPage;
+
+        // 장르 필터가 있으면 처리 (단, period 쿼리와 결합하기 복잡하므로 MVP에서는 ALLTIME 랭킹만 장르 지원하거나,
+        // 단순하게 필터링 후 메모리 정렬은 비효율적.
+        // 여기서는 "기간별 랭킹"은 전체 장르 대상으로 하고, "장르별 랭킹"은 ALLTIME(Sort)으로 처리하는 전략 사용 가능.
+        // 하지만 요구사항은 "Ranking Page"에서 탭과 장르 필터가 있음.
+        // findRankingByPeriod 쿼리에 genre 조건을 추가하는 것이 좋음. Repository 수정 필요할 수 있음.
+        // 일단 기간 로직 구현.
+
+        java.time.LocalDateTime startDate = null;
+        if ("DAILY".equalsIgnoreCase(period)) {
+            startDate = java.time.LocalDateTime.now().minusDays(1);
+        } else if ("WEEKLY".equalsIgnoreCase(period)) {
+            startDate = java.time.LocalDateTime.now().minusWeeks(1);
+        } else if ("MONTHLY".equalsIgnoreCase(period)) {
+            startDate = java.time.LocalDateTime.now().minusMonths(1);
+        }
+
+        if (startDate != null) {
+            // 기간별 랭킹 (좋아요 급상승 등)
+            // TODO: 장르 필터까지 적용하려면 Repository 쿼리 수정 필요. 현재는 기간만 적용.
+            workPage = workRepository.findRankingByPeriod(startDate, pageable);
+        } else {
+            // 전체 기간 (= 실시간/누적 인기순) -> 좋아요 순 정렬 강제
+            // DiscoveryController에서 Sort를 받아오더라도, 'RANKING' 로직에서는 likeCount DESC가 기본이어야 함.
+            // 하지만 Pageable에 이미 Sort가 포함되어 있을 수 있음.
+            // 클라이언트가 파라미터로 sort=likeCount,desc를 보내준다면 findAll(pageable)로 충분.
+
+            // 만약 period가 ALL-TIME이거나 null인데 랭킹 조회라면 likeCount 정렬을 강제하는 것이 안전.
+            if ("ALL-TIME".equalsIgnoreCase(period) || period == null) {
+                // Pageable에서 Sort 재정의 필요
+                pageable = org.springframework.data.domain.PageRequest.of(
+                        pageable.getPageNumber(),
+                        pageable.getPageSize(),
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                                "likeCount"));
+            }
+
+            if (genre != null && !genre.isEmpty() && !"ALL".equalsIgnoreCase(genre)) {
+                com.stolink.backend.domain.work.entity.Genre genreEnum = com.stolink.backend.domain.work.entity.Genre
+                        .from(genre);
+                workPage = workRepository.findAllByGenre(genreEnum, pageable);
+            } else {
+                workPage = workRepository.findAll(pageable);
+            }
+        }
+
+        return convertToResponse(workPage);
+    }
+
+    // 오버로딩 (기존 코드 호환용)
+    public Page<DiscoveryWorkResponse> getWorks(Pageable pageable) {
+        return getWorks(null, null, pageable);
     }
 
     /**
@@ -47,7 +131,7 @@ public class DiscoveryService {
     }
 
     /**
-     * 작품 목록을 DiscoveryWorkResponse로 변환 (배치로 챕터 수, 좋아요 수 조회)
+     * 작품 목록을 DiscoveryWorkResponse로 변환 (배치로 챕터 수 조회, 좋아요 수는 Work 필드 사용)
      */
     private Page<DiscoveryWorkResponse> convertToResponse(Page<Work> workPage) {
         List<Work> works = workPage.getContent();
@@ -67,22 +151,11 @@ public class DiscoveryService {
                         row -> (UUID) row[0],
                         row -> (Long) row[1]));
 
-        // 배치로 모든 작품의 좋아요 수를 한 번에 조회 (N+1 해결)
-        Map<UUID, Long> likeCountMap = new HashMap<>();
-
-        if (!workIds.isEmpty()) {
-            List<Object[]> likeCounts = workLikeRepository.countLikesByWorkIds(workIds);
-            likeCountMap = likeCounts.stream()
-                    .collect(Collectors.toMap(
-                            row -> (UUID) row[0],
-                            row -> (Long) row[1]));
-        }
-
-        Map<UUID, Long> finalLikeCountMap = likeCountMap;
         List<DiscoveryWorkResponse> responses = works.stream()
                 .map(work -> {
                     int chapterCount = chapterCountMap.getOrDefault(work.getId(), 0L).intValue();
-                    long likeCount = finalLikeCountMap.getOrDefault(work.getId(), 0L);
+                    // Work 엔티티의 관리되는 likeCount 사용
+                    long likeCount = work.getLikeCount();
                     return DiscoveryWorkResponse.from(work, chapterCount, likeCount);
                 })
                 .collect(Collectors.toList());

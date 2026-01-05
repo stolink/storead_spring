@@ -53,11 +53,16 @@ public class Work extends BaseEntity {
     private Long ratingCount = 0L;
 
     public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status) {
-        if (title != null) this.title = title;
-        if (synopsis != null) this.synopsis = synopsis;
-        if (coverImageUrl != null) this.coverImageUrl = coverImageUrl;
-        if (genre != null) this.genre = genre;
-        if (status != null) this.status = status;
+        if (title != null)
+            this.title = title;
+        if (synopsis != null)
+            this.synopsis = synopsis;
+        if (coverImageUrl != null)
+            this.coverImageUrl = coverImageUrl;
+        if (genre != null)
+            this.genre = genre;
+        if (status != null)
+            this.status = status;
     }
 
     public void addRating(int score) {
@@ -74,5 +79,23 @@ public class Work extends BaseEntity {
         if (this.ratingCount > 0) {
             this.ratingCount--;
         }
+    }
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Long likeCount = 0L;
+
+    public void addLike() {
+        this.likeCount++;
+    }
+
+    public void removeLike() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
+    public void syncLikeCount(long count) {
+        this.likeCount = count;
     }
 }
