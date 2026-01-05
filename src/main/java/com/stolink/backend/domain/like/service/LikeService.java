@@ -72,6 +72,7 @@ public class LikeService {
      * 작품 좋아요 토글 (중복 방지)
      * - 이미 좋아요 → 삭제
      * - 좋아요 없음 → 생성
+     * - Race Condition 방지: DB 레벨 원자적 연산 사용
      */
     @Transactional
     public LikeResponse toggleWorkLike(UUID userId, UUID workId) {
@@ -90,6 +91,8 @@ public class LikeService {
         if (existingLike.isPresent()) {
             log.info("[LikeService] Found existing like. Deleting. userId: {}", userId);
             workLikeRepository.delete(existingLike.get());
+            // DB 레벨 원자적 연산으로 Race Condition 방지
+            workRepository.decrementLikeCount(workId);
             liked = false;
         } else {
             log.info("[LikeService] Like NOT FOUND. Creating new. userId: {}", userId);
@@ -99,6 +102,8 @@ public class LikeService {
                     .build();
             try {
                 workLikeRepository.save(like);
+                // DB 레벨 원자적 연산으로 Race Condition 방지
+                workRepository.incrementLikeCount(workId);
                 log.info("[LikeService] Like saved.");
                 liked = true;
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
@@ -108,7 +113,9 @@ public class LikeService {
             }
         }
 
-        long likeCount = workLikeRepository.countByWorkId(workId);
+        // 최신 좋아요 수 조회 (원자적 연산 후 반영된 값)
+        Work updatedWork = workRepository.findById(workId).orElse(work);
+        long likeCount = updatedWork.getLikeCount();
         log.info("[LikeService] Final likeCount: {}, isLiked: {}", likeCount, liked);
         return LikeResponse.of(liked, likeCount);
     }
@@ -117,12 +124,11 @@ public class LikeService {
      * 특정 작품의 좋아요 상태 조회
      */
     public LikeResponse getWorkLikeStatus(UUID userId, UUID workId) {
-        if (!workRepository.existsById(workId)) {
-            throw new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId);
-        }
+        Work work = workRepository.findById(workId)
+                .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
         boolean liked = userId != null && workLikeRepository.existsByUserIdAndWorkId(userId, workId);
-        long likeCount = workLikeRepository.countByWorkId(workId);
+        long likeCount = work.getLikeCount();
         log.info("[LikeService] getWorkLikeStatus. workId: {}, userId: {} -> liked: {}", workId, userId, liked);
         return LikeResponse.of(liked, likeCount);
     }

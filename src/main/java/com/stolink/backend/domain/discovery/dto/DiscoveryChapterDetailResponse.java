@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class DiscoveryChapterDetailResponse {
 
     private UUID id;
@@ -24,6 +24,15 @@ public class DiscoveryChapterDetailResponse {
     private UUID nextChapterId;
     private java.util.Map<String, Object> graphSnapshot;
     private LocalDateTime createdAt;
+
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private Integer price;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
+    @Builder.Default
+    private Boolean isPurchased = false;
+    @Builder.Default
+    private Boolean hasAccess = false; // 열람 권한 여부
 
     public static DiscoveryChapterDetailResponse from(
             Chapter chapter,
@@ -45,6 +54,10 @@ public class DiscoveryChapterDetailResponse {
                 .nextChapterId(nextChapterId)
                 .graphSnapshot(chapter.getGraphSnapshot())
                 .createdAt(chapter.getCreatedAt())
+                .isFree(chapter.getIsFree())
+                .price(chapter.getPrice())
+                .accessType(chapter.getAccessType())
+                .hasAccess(chapter.getIsFree()) // 기본적으로 무료면 열람 가능
                 .build();
     }
 }

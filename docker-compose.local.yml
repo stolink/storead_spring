@@ -35,8 +35,10 @@ services:
       APP_STORAGE_BASE_PATH: /app/storage/uploads
       # CORS
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:5174}
-      # OAuth2 Redirect URI (storead frontend)
-      OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI}
+      # OAuth2 Redirect URI (Conflict resolution: use specific env var or default to 5174)
+      OAUTH2_REDIRECT_URI: ${STOREAD_OAUTH2_REDIRECT_URI:-http://localhost:5174/oauth2/callback}
+      OAUTH2_DEFAULT_FAILURE_URL: ${STOREAD_OAUTH2_DEFAULT_FAILURE_URL:-http://localhost:5174/oauth2/callback}
+      OAUTH2_ALLOWED_REDIRECT_HOSTS: ${STOREAD_OAUTH2_ALLOWED_REDIRECT_HOSTS:-localhost,storead.stolink.com}
     ports:
       - "8081:8081" # 로컬: 외부 8081 → 내부 8081
     volumes:

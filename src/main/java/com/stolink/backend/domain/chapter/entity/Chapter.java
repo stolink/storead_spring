@@ -12,8 +12,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "chapters", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_chapter_work_document", columnNames = {"work_id", "document_id"}),
-    @UniqueConstraint(name = "uk_chapter_work_number", columnNames = {"work_id", "chapter_number"})
+        @UniqueConstraint(name = "uk_chapter_work_document", columnNames = { "work_id", "document_id" }),
+        @UniqueConstraint(name = "uk_chapter_work_number", columnNames = { "work_id", "chapter_number" })
 })
 @Getter
 @Builder
@@ -57,9 +57,25 @@ public class Chapter extends BaseEntity {
     @Builder.Default
     private Long ratingCount = 0L;
 
+    // === 유료/무료 관련 필드 ===
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isFree = true; // 무료 여부
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer price = 0; // 크레딧 가격
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ChapterAccessType accessType = ChapterAccessType.FREE; // 접근 유형
+
     public void update(String title, String content) {
-        if (title != null) this.title = title;
-        if (content != null) this.content = content;
+        if (title != null)
+            this.title = title;
+        if (content != null)
+            this.content = content;
     }
 
     public void updateChapterNumber(Integer chapterNumber) {

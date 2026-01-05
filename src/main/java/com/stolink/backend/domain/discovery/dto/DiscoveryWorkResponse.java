@@ -44,4 +44,11 @@ public class DiscoveryWorkResponse {
                 .updatedAt(work.getUpdatedAt())
                 .build();
     }
+
+    /**
+     * 간단한 변환 (부가 정보 0으로 초기화)
+     */
+    public static DiscoveryWorkResponse from(Work work) {
+        return from(work, 0, work.getLikeCount());
+    }
 }
