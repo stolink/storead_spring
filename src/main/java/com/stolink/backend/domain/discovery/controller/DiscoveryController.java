@@ -74,11 +74,13 @@ public class DiscoveryController {
                 Sort.Direction direction = order.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
                 String sortProperty = sort;
 
-                // 정렬 필드 매핑 (popular -> likeCount, rating -> ratingSum)
+                // 정렬 필드 매핑
+                // - popular: 좋아요 수 기준
+                // - rating: 평균 별점 기준 (ratingSum 대신 averageRating 사용하여 정확한 평점 정렬)
                 if ("popular".equalsIgnoreCase(sort)) {
                         sortProperty = "likeCount";
                 } else if ("rating".equalsIgnoreCase(sort)) {
-                        sortProperty = "ratingSum";
+                        sortProperty = "averageRating";
                 }
 
                 Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, sortProperty));

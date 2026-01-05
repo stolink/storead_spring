@@ -77,6 +77,11 @@ public interface WorkRepository
         /**
          * 기간별 좋아요 순 랭킹 조회
          * - WorkLike 테이블을 기준으로 집계
+         * 
+         * ⚠️ 성능 경고: 데이터가 수십만 건 이상 쌓일 경우 성능 저하 우려
+         * 권장 개선사항:
+         * - 랭킹 전용 집계 테이블 운영 (일간/주간 배치 집계)
+         * - Redis를 활용한 실시간 랭킹 캐싱
          */
         @Query("SELECT wl.work FROM WorkLike wl " +
                         "WHERE wl.createdAt >= :startDate " +

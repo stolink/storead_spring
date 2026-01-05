@@ -52,6 +52,14 @@ public class Work extends BaseEntity {
     @Builder.Default
     private Long ratingCount = 0L;
 
+    /**
+     * 평균 별점 (인덱스 정렬 최적화용)
+     * - 별점 등록/수정/삭제 시 자동 계산
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Double averageRating = 0.0;
+
     public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status) {
         if (title != null)
             this.title = title;
@@ -68,16 +76,30 @@ public class Work extends BaseEntity {
     public void addRating(int score) {
         this.ratingSum += score;
         this.ratingCount++;
+        updateAverageRating();
     }
 
     public void updateRating(int oldScore, int newScore) {
         this.ratingSum = this.ratingSum - oldScore + newScore;
+        updateAverageRating();
     }
 
     public void removeRating(int score) {
         this.ratingSum -= score;
         if (this.ratingCount > 0) {
             this.ratingCount--;
+        }
+        updateAverageRating();
+    }
+
+    /**
+     * 평균 별점 계산 및 업데이트
+     */
+    private void updateAverageRating() {
+        if (this.ratingCount > 0) {
+            this.averageRating = (double) this.ratingSum / this.ratingCount;
+        } else {
+            this.averageRating = 0.0;
         }
     }
 

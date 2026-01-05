@@ -29,6 +29,9 @@ public class DiscoveryService {
     private final ChapterRepository chapterRepository;
     private final WorkLikeRepository workLikeRepository;
     private final LibraryRepository libraryRepository;
+    private final com.stolink.backend.domain.chapter.repository.ChapterPurchaseRepository chapterPurchaseRepository; // 전체
+                                                                                                                     // 경로
+                                                                                                                     // 사용
 
     /**
      * 작품 목록 조회 (필터링 지원)
@@ -221,6 +224,24 @@ public class DiscoveryService {
             }
         }
 
-        return DiscoveryChapterDetailResponse.from(chapter, likeCount, likedByMe, prevChapterId, nextChapterId);
+        DiscoveryChapterDetailResponse response = DiscoveryChapterDetailResponse.from(chapter, likeCount, likedByMe,
+                prevChapterId, nextChapterId);
+
+        // hasAccess 정합성 개선: 유료 챕터의 경우 실제 구매 여부 확인
+        if (!Boolean.TRUE.equals(chapter.getIsFree()) && userId != null) {
+            boolean isPurchased = chapterPurchaseRepository.existsByUserIdAndChapterId(userId, chapterId);
+
+            // 유료이면서 구매했다면 열람 가능 (hasAccess = true)
+            // 유료이면서 구매 안했으면 열람 불가 (hasAccess = false) - from 메서드에서 이미 false로 설정되어 있을
+            // 것임(isFree가 false이므로)
+            if (isPurchased) {
+                response = response.toBuilder()
+                        .isPurchased(true)
+                        .hasAccess(true)
+                        .build();
+            }
+        }
+
+        return response;
     }
 }
