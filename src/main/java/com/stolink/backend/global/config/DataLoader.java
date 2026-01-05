@@ -15,6 +15,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,7 @@ public class DataLoader implements CommandLineRunner {
         private final UserRepository userRepository;
         private final WorkRepository workRepository;
         private final ChapterRepository chapterRepository;
+        private final PasswordEncoder passwordEncoder;
 
         @Override
         @Transactional
@@ -81,7 +83,7 @@ public class DataLoader implements CommandLineRunner {
                 return userRepository.findByEmail(email)
                                 .orElseGet(() -> userRepository.save(User.builder()
                                                 .email(email)
-                                                .password("password123") // 데모용 평문 비밀번호
+                                                .password(passwordEncoder.encode("password123")) // 암호화된 비밀번호 저장
                                                 .nickname(nickname)
                                                 .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed="
                                                                 + avatarSeed)
