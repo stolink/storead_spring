@@ -69,15 +69,20 @@ public class DiscoveryService {
 
         // 배치로 모든 작품의 좋아요 수를 한 번에 조회 (N+1 해결)
         Map<UUID, Long> likeCountMap = new HashMap<>();
-        for (UUID workId : workIds) {
-            long likeCount = workLikeRepository.countByWorkId(workId);
-            likeCountMap.put(workId, likeCount);
+
+        if (!workIds.isEmpty()) {
+            List<Object[]> likeCounts = workLikeRepository.countLikesByWorkIds(workIds);
+            likeCountMap = likeCounts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (UUID) row[0],
+                            row -> (Long) row[1]));
         }
 
+        Map<UUID, Long> finalLikeCountMap = likeCountMap;
         List<DiscoveryWorkResponse> responses = works.stream()
                 .map(work -> {
                     int chapterCount = chapterCountMap.getOrDefault(work.getId(), 0L).intValue();
-                    long likeCount = likeCountMap.getOrDefault(work.getId(), 0L);
+                    long likeCount = finalLikeCountMap.getOrDefault(work.getId(), 0L);
                     return DiscoveryWorkResponse.from(work, chapterCount, likeCount);
                 })
                 .collect(Collectors.toList());
