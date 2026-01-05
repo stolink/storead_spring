@@ -47,7 +47,7 @@ public class DiscoveryService {
     }
 
     /**
-     * 작품 목록을 DiscoveryWorkResponse로 변환 (배치로 챕터 수 조회)
+     * 작품 목록을 DiscoveryWorkResponse로 변환 (배치로 챕터 수, 좋아요 수 조회)
      */
     private Page<DiscoveryWorkResponse> convertToResponse(Page<Work> workPage) {
         List<Work> works = workPage.getContent();
@@ -67,10 +67,18 @@ public class DiscoveryService {
                         row -> (UUID) row[0],
                         row -> (Long) row[1]));
 
+        // 배치로 모든 작품의 좋아요 수를 한 번에 조회 (N+1 해결)
+        Map<UUID, Long> likeCountMap = new HashMap<>();
+        for (UUID workId : workIds) {
+            long likeCount = workLikeRepository.countByWorkId(workId);
+            likeCountMap.put(workId, likeCount);
+        }
+
         List<DiscoveryWorkResponse> responses = works.stream()
                 .map(work -> {
                     int chapterCount = chapterCountMap.getOrDefault(work.getId(), 0L).intValue();
-                    return DiscoveryWorkResponse.from(work, chapterCount);
+                    long likeCount = likeCountMap.getOrDefault(work.getId(), 0L);
+                    return DiscoveryWorkResponse.from(work, chapterCount, likeCount);
                 })
                 .collect(Collectors.toList());
 
