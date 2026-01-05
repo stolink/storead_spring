@@ -62,36 +62,31 @@ public class DataLoader implements CommandLineRunner {
         }
 
         /**
-         * 테스트 사용자 3명 생성
+         * 테스트 사용자 3명 생성 (이미 존재하면 기존 사용자 반환)
          */
         private List<User> createTestUsers() {
                 List<User> users = new ArrayList<>();
 
-                users.add(userRepository.save(User.builder()
-                                .email("test1@example.com")
-                                .password("password123") // 데모용 평문 비밀번호
-                                .nickname("작가김철수")
-                                .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test1")
-                                .provider(AuthProvider.LOCAL)
-                                .build()));
-
-                users.add(userRepository.save(User.builder()
-                                .email("test2@example.com")
-                                .password("password123") // 데모용 평문 비밀번호
-                                .nickname("작가이영희")
-                                .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test2")
-                                .provider(AuthProvider.LOCAL)
-                                .build()));
-
-                users.add(userRepository.save(User.builder()
-                                .email("test3@example.com")
-                                .password("password123") // 데모용 평문 비밀번호
-                                .nickname("작가박민수")
-                                .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed=test3")
-                                .provider(AuthProvider.LOCAL)
-                                .build()));
+                users.add(findOrCreateUser("test1@example.com", "작가김철수", "test1"));
+                users.add(findOrCreateUser("test2@example.com", "작가이영희", "test2"));
+                users.add(findOrCreateUser("test3@example.com", "작가박민수", "test3"));
 
                 return users;
+        }
+
+        /**
+         * 이메일로 사용자 조회, 없으면 새로 생성
+         */
+        private User findOrCreateUser(String email, String nickname, String avatarSeed) {
+                return userRepository.findByEmail(email)
+                                .orElseGet(() -> userRepository.save(User.builder()
+                                                .email(email)
+                                                .password("password123") // 데모용 평문 비밀번호
+                                                .nickname(nickname)
+                                                .avatarUrl("https://api.dicebear.com/7.x/avataaars/svg?seed="
+                                                                + avatarSeed)
+                                                .provider(AuthProvider.LOCAL)
+                                                .build()));
         }
 
         /**
