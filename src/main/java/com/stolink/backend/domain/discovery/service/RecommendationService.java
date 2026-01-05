@@ -64,8 +64,10 @@ public class RecommendationService {
                                         .collect(Collectors.toList());
                 }
 
+                // 읽은 작품 ID 목록 (성능 최적화: 최근 100개로 제한하여 NOT IN 쿼리 성능 저하 방지)
                 List<UUID> readWorkIds = histories.stream()
                                 .map(ReadingHistory::getWorkId)
+                                .limit(100) // NOT IN 쿼리 성능 최적화
                                 .collect(Collectors.toList());
 
                 Map<UUID, Work> readWorks = workRepository.findAllById(readWorkIds).stream()

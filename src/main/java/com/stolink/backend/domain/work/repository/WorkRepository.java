@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -82,4 +83,26 @@ public interface WorkRepository
                         "GROUP BY wl.work " +
                         "ORDER BY COUNT(wl) DESC, wl.work.likeCount DESC")
         Page<Work> findRankingByPeriod(@Param("startDate") java.time.LocalDateTime startDate, Pageable pageable);
+
+        /**
+         * 모든 작품의 좋아요 수를 실제 WorkLike 테이블 기준으로 일괄 동기화
+         * N+1 문제 해결: 단일 벌크 업데이트 쿼리로 처리
+         */
+        @Modifying
+        @Query("UPDATE Work w SET w.likeCount = (SELECT COUNT(wl) FROM WorkLike wl WHERE wl.work = w)")
+        void syncAllLikeCounts();
+
+        /**
+         * 좋아요 수 원자적 증가 (Race Condition 방지)
+         */
+        @Modifying
+        @Query("UPDATE Work w SET w.likeCount = w.likeCount + 1 WHERE w.id = :id")
+        void incrementLikeCount(@Param("id") UUID id);
+
+        /**
+         * 좋아요 수 원자적 감소 (Race Condition 방지)
+         */
+        @Modifying
+        @Query("UPDATE Work w SET w.likeCount = CASE WHEN w.likeCount > 0 THEN w.likeCount - 1 ELSE 0 END WHERE w.id = :id")
+        void decrementLikeCount(@Param("id") UUID id);
 }

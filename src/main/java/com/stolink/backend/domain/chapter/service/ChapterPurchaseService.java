@@ -59,6 +59,8 @@ public class ChapterPurchaseService {
 
     /**
      * 챕터 구매 실행
+     * - 결제 원자성 보장: 구매 기록 먼저 저장 후 크레딧 차감
+     * - 중복 구매 방지: 유니크 제약 조건 활용
      */
     @Transactional
     public void purchaseChapter(UUID userId, UUID chapterId) {
@@ -71,26 +73,33 @@ public class ChapterPurchaseService {
             return;
         }
 
-        // 2. 이미 구매했는지 확인
+        // 2. 이미 구매했는지 확인 (멱등성 보장)
         if (chapterPurchaseRepository.existsByUserIdAndChapterId(userId, chapterId)) {
             return;
         }
 
-        // 3. 크레딧 차감
+        // 3. 구매 기록 먼저 저장 (유니크 제약 조건으로 중복 방지)
+        // 크레딧 차감 전에 저장하여 결제 실패 시 롤백 보장
+        ChapterPurchase purchase = ChapterPurchase.builder()
+                .userId(userId)
+                .chapterId(chapterId)
+                .pricePaid(chapter.getPrice())
+                .build();
+
+        try {
+            chapterPurchaseRepository.save(purchase);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // 동시성 이슈로 이미 구매된 경우 (멱등성 보장)
+            return;
+        }
+
+        // 4. 크레딧 차감 (트랜잭션 내에서 실행되므로 실패 시 구매 기록도 롤백됨)
         CreditUseRequest useRequest = new CreditUseRequest(
                 (long) chapter.getPrice(),
                 "챕터 구매: " + chapter.getTitle(),
                 "CHAPTER",
                 chapterId.toString());
         creditService.useCredit(userId, useRequest);
-
-        // 4. 구매 기록 저장
-        ChapterPurchase purchase = ChapterPurchase.builder()
-                .userId(userId)
-                .chapterId(chapterId)
-                .pricePaid(chapter.getPrice())
-                .build();
-        chapterPurchaseRepository.save(purchase);
     }
 
     /**

@@ -19,12 +19,26 @@ public class ChapterPurchaseController {
 
     /**
      * Helper to extract UUID from principal
+     * - UUID 직접 전달 시 처리
+     * - UserDetails 구현체에서 UUID 추출 (security 설정에 따라)
      */
     private UUID extractUserId(Object principal) {
+        if (principal == null) {
+            return null;
+        }
         if (principal instanceof UUID) {
             return (UUID) principal;
         }
-        // UserDetails 등 다른 타입 처리 필요 시 추가
+        // Spring Security UserDetails 구현체 처리
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+            try {
+                return UUID.fromString(username);
+            } catch (IllegalArgumentException e) {
+                // username이 UUID 형식이 아닌 경우
+                return null;
+            }
+        }
         return null;
     }
 
