@@ -23,6 +23,7 @@ public class DiscoveryWorkResponse {
     private int chapterCount;
     private Long ratingSum;
     private Long ratingCount;
+    private Long likeCount; // 좋아요 수 추가
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -38,6 +39,25 @@ public class DiscoveryWorkResponse {
                 .chapterCount(chapterCount)
                 .ratingSum(work.getRatingSum())
                 .ratingCount(work.getRatingCount())
+                .likeCount(0L) // 기본값, 서비스에서 설정
+                .createdAt(work.getCreatedAt())
+                .updatedAt(work.getUpdatedAt())
+                .build();
+    }
+
+    public static DiscoveryWorkResponse from(Work work, int chapterCount, long likeCount) {
+        return DiscoveryWorkResponse.builder()
+                .id(work.getId())
+                .title(work.getTitle())
+                .synopsis(work.getSynopsis())
+                .coverImageUrl(work.getCoverImageUrl())
+                .genre(work.getGenre())
+                .status(work.getStatus())
+                .authorNickname(work.getAuthor().getNickname())
+                .chapterCount(chapterCount)
+                .ratingSum(work.getRatingSum())
+                .ratingCount(work.getRatingCount())
+                .likeCount(likeCount)
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
                 .build();
