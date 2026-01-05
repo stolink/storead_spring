@@ -13,6 +13,7 @@ public class ChapterResponse {
 
     private UUID id;
     private UUID workId;
+    private String documentId; // stolink 문서 ID (에디터 연결용)
     private String title;
     private Integer chapterNumber;
     private Long viewCount;
@@ -23,6 +24,7 @@ public class ChapterResponse {
         return ChapterResponse.builder()
                 .id(chapter.getId())
                 .workId(chapter.getWork().getId())
+                .documentId(chapter.getDocumentId())
                 .title(chapter.getTitle())
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
