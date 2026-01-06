@@ -161,9 +161,12 @@ jobs:
           COMPOSE_BASE64=$(echo "$COMPOSE_CONTENT" | base64 -w 0)
 
           # SSM 명령 실행 및 Command ID 캡처
+          # dev 브랜치: dev-storead-spring 태그, main 브랜치: storead-spring 태그
+          EC2_TAG=${{ github.ref == 'refs/heads/main' && 'storead-spring' || 'dev-storead-spring' }}
+
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:tag,Values=storead-spring" \
+            --targets "Key=tag:tag,Values=${EC2_TAG}" \
             --parameters "commands=[
               \"sudo -i -u ubuntu bash -c 'mkdir -p /home/ubuntu/storead-project'\",
               \"sudo rm -f /home/ubuntu/storead-project/.env && echo '${ENV_BASE64}' | base64 -d | sudo -u ubuntu tee /home/ubuntu/storead-project/.env > /dev/null\",
