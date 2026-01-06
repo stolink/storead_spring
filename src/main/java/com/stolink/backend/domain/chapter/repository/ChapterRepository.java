@@ -68,4 +68,39 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                         ")", nativeQuery = true)
         boolean existsByWorkIdAndDocumentIdInArray(@Param("workId") UUID workId,
                         @Param("documentId") String documentId);
+
+        /**
+         * 일괄 중복 체크: 여러 documentId를 한 번의 쿼리로 검증 (N+1 방지)
+         * 
+         * 단일 document_id 컬럼과 document_ids JSONB 배열 모두에서 확인
+         * 
+         * @param workId 작품 ID
+         * @param docIds 확인할 문서 ID 목록
+         * @return 이미 게시된 문서 ID가 하나라도 존재하면 true
+         */
+        @Query(value = "SELECT EXISTS(" +
+                        "SELECT 1 FROM chapters c " +
+                        "WHERE c.work_id = :workId " +
+                        "AND (c.document_id = ANY(CAST(:docIds AS text[])) " +
+                        "OR c.document_ids ?| CAST(:docIds AS text[]))" +
+                        ")", nativeQuery = true)
+        boolean existsByWorkIdAndAnyDocumentIds(@Param("workId") UUID workId,
+                        @Param("docIds") String[] docIds);
+
+        /**
+         * 일괄 중복 체크: 중복된 문서 ID 목록 반환 (에러 메시지용)
+         * 
+         * @param workId 작품 ID
+         * @param docIds 확인할 문서 ID 목록
+         * @return 이미 게시된 문서 ID 목록
+         */
+        @Query(value = "SELECT DISTINCT d.doc_id FROM (" +
+                        "SELECT c.document_id AS doc_id FROM chapters c " +
+                        "WHERE c.work_id = :workId AND c.document_id = ANY(CAST(:docIds AS text[])) " +
+                        "UNION " +
+                        "SELECT jsonb_array_elements_text(c.document_ids) AS doc_id FROM chapters c " +
+                        "WHERE c.work_id = :workId AND c.document_ids ?| CAST(:docIds AS text[])" +
+                        ") d WHERE d.doc_id = ANY(CAST(:docIds AS text[]))", nativeQuery = true)
+        List<String> findDuplicateDocumentIds(@Param("workId") UUID workId,
+                        @Param("docIds") String[] docIds);
 }

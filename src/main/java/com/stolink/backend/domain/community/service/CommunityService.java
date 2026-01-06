@@ -50,23 +50,17 @@ public class CommunityService {
                     return createWork(draft, userId);
                 });
 
-        // 3. 중복 게시 체크 (모든 documentId에 대해 양쪽 필드 확인)
+        // 3. 중복 게시 체크 (일괄 쿼리로 N+1 방지)
         List<String> allDocumentIds = draft.getAllDocumentIds();
+        String[] docIdsArray = allDocumentIds.toArray(new String[0]);
         log.info("Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
 
-        for (String docId : allDocumentIds) {
-            // 시나리오 A, B: 단일 documentId 필드 체크
-            if (chapterRepository.existsByWorkIdAndDocumentId(work.getId(), docId)) {
-                log.warn("Duplicate detected in document_id: workId={}, docId={}", work.getId(), docId);
-                throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
-                        "이미 게시된 챕터입니다: " + docId);
-            }
-            // 시나리오 C: documentIds JSONB 배열 체크
-            if (chapterRepository.existsByWorkIdAndDocumentIdInArray(work.getId(), docId)) {
-                log.warn("Duplicate detected in document_ids array: workId={}, docId={}", work.getId(), docId);
-                throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
-                        "이미 게시된 챕터입니다: " + docId);
-            }
+        if (chapterRepository.existsByWorkIdAndAnyDocumentIds(work.getId(), docIdsArray)) {
+            // 구체적인 중복 ID를 찾아서 에러 메시지에 포함
+            List<String> duplicates = chapterRepository.findDuplicateDocumentIds(work.getId(), docIdsArray);
+            log.warn("Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(), duplicates);
+            throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
+                    "이미 게시된 챕터가 있습니다: " + String.join(", ", duplicates));
         }
         log.info("Duplication check passed for documentIds={}", allDocumentIds);
 
