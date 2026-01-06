@@ -5,6 +5,7 @@ import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.community.dto.CommunityPublishRequest;
 import com.stolink.backend.domain.community.dto.CommunityPublishResponse;
 import com.stolink.backend.domain.draft.entity.Draft;
+import com.stolink.backend.domain.draft.service.DocumentPublishService;
 import com.stolink.backend.domain.draft.service.DraftService;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.UserRepository;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CommunityService {
 
     private final DraftService draftService;
+    private final DocumentPublishService documentPublishService;
     private final WorkRepository workRepository;
     private final ChapterRepository chapterRepository;
     private final UserRepository userRepository;
@@ -47,18 +50,37 @@ public class CommunityService {
                     return createWork(draft, userId);
                 });
 
-        // 3. 중복 게시 체크 (동일 Work 내 동일 documentId 존재 여부)
-        if (chapterRepository.existsByWorkIdAndDocumentId(work.getId(), draft.getDocumentId())) {
-            throw new com.stolink.backend.domain.community.exception.DuplicateChapterException("이미 게시된 챕터입니다.");
+        // 3. 중복 게시 체크 (모든 documentId에 대해 양쪽 필드 확인)
+        List<String> allDocumentIds = draft.getAllDocumentIds();
+        log.info("Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
+
+        for (String docId : allDocumentIds) {
+            // 시나리오 A, B: 단일 documentId 필드 체크
+            if (chapterRepository.existsByWorkIdAndDocumentId(work.getId(), docId)) {
+                log.warn("Duplicate detected in document_id: workId={}, docId={}", work.getId(), docId);
+                throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
+                        "이미 게시된 챕터입니다: " + docId);
+            }
+            // 시나리오 C: documentIds JSONB 배열 체크
+            if (chapterRepository.existsByWorkIdAndDocumentIdInArray(work.getId(), docId)) {
+                log.warn("Duplicate detected in document_ids array: workId={}, docId={}", work.getId(), docId);
+                throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
+                        "이미 게시된 챕터입니다: " + docId);
+            }
         }
+        log.info("Duplication check passed for documentIds={}", allDocumentIds);
 
         // 4. Chapter 생성
         Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle());
 
-        // 5. Draft 삭제 (소유권 체크 포함)
+        // 5. Document 게시 상태 업데이트 (Stolink DB)
+        documentPublishService.markAsPublished(draft.getAllDocumentIds());
+
+        // 6. Draft 삭제 (소유권 체크 포함)
         draftService.deleteById(request.getDraftId(), userId);
 
-        log.info("Community publish completed: workId={}, chapterId={}", work.getId(), chapter.getId());
+        log.info("Community publish completed: workId={}, chapterId={}, documentIds={}",
+                work.getId(), chapter.getId(), draft.getAllDocumentIds());
 
         return CommunityPublishResponse.builder()
                 .workId(work.getId())
@@ -96,21 +118,35 @@ public class CommunityService {
                     .orElse(0) + 1;
         }
 
-        String chapterTitle = (overrideTitle != null && !overrideTitle.isBlank()) 
-                ? overrideTitle 
+        String chapterTitle = (overrideTitle != null && !overrideTitle.isBlank())
+                ? overrideTitle
                 : draft.getTitle();
 
-        Chapter chapter = Chapter.builder()
+        // 병합 배포 여부에 따라 저장 필드 분기
+        Chapter.ChapterBuilder builder = Chapter.builder()
                 .work(work)
                 .title(chapterTitle)
                 .content(draft.getContent())
                 .chapterNumber(chapterNumber)
-                .documentId(draft.getDocumentId())
-                .graphSnapshot(draft.getGraphSnapshot())
-                .build();
+                .graphSnapshot(draft.getGraphSnapshot());
 
-        log.info("Created new chapter: workId={}, chapterNumber={}, title={}", 
-                work.getId(), chapterNumber, chapterTitle);
+        if (Boolean.TRUE.equals(draft.getIsMerged())) {
+            // 시나리오 C: 병합 배포 → documentIds 배열에 저장
+            builder.documentIds(draft.getAllDocumentIds());
+            log.info("Created merged chapter: workId={}, chapterNumber={}, title={}, documentIds={}",
+                    work.getId(), chapterNumber, chapterTitle, draft.getAllDocumentIds());
+        } else {
+            // 시나리오 A, B: 단일/각각 배포 → documentId에 저장
+            String docId = draft.getDocumentId();
+            if (docId == null && !draft.getAllDocumentIds().isEmpty()) {
+                docId = draft.getAllDocumentIds().get(0);
+            }
+            builder.documentId(docId);
+            log.info("Created single chapter: workId={}, chapterNumber={}, title={}, documentId={}",
+                    work.getId(), chapterNumber, chapterTitle, docId);
+        }
+
+        Chapter chapter = builder.build();
         return chapterRepository.save(chapter);
     }
 }

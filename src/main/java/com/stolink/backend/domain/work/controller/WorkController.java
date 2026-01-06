@@ -16,7 +16,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -25,6 +27,24 @@ import java.util.UUID;
 public class WorkController {
 
     private final WorkService workService;
+
+    /**
+     * projectId로 작품 조회 (커뮤니티 배포용)
+     * GET /api/works?projectId={projectId}
+     * 
+     * 프론트엔드에서 기존 작품이 있는지 확인할 때 사용
+     */
+    @GetMapping(params = "projectId")
+    public ApiResponse<Map<String, Object>> getWorkByProjectId(
+            @RequestParam String projectId) {
+
+        Optional<WorkResponse> work = workService.findByProjectId(projectId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("works", work.map(List::of).orElse(List.of()));
+
+        return ApiResponse.ok(response);
+    }
 
     @GetMapping
     public ApiResponse<Map<String, Object>> getWorks(
