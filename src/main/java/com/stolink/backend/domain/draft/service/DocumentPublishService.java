@@ -38,17 +38,15 @@ public class DocumentPublishService {
         log.info("Attempting to update Stolink documents status to is_published=true for IDs: {}", documentIds);
 
         try {
-            // String UUID를 UUID 타입으로 변환
-            List<UUID> uuidList = documentIds.stream()
+            // String UUID를 UUID 배열로 변환 (PostgreSQL ANY() 함수용)
+            UUID[] uuidArray = documentIds.stream()
                     .map(UUID::fromString)
-                    .toList();
+                    .toArray(UUID[]::new);
 
-            // Native Query에서 PostgreSQL의 UUID 리스트 처리를 위해 ANY()와 CAST 사용
-            // 또는 단순 IN 절이 동작하지 않을 경우를 대비해 루프를 돌거나 파라미터 확장이 필요함
-            // 여기서는 가장 안정적인 방식인 파라미터 바인딩을 시도하되, 로그를 통해 결과를 확인
-            String sql = "UPDATE documents SET is_published = true WHERE id IN (:ids)";
+            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
+            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(:ids)";
             Query query = entityManager.createNativeQuery(sql);
-            query.setParameter("ids", uuidList);
+            query.setParameter("ids", uuidArray);
 
             int updatedCount = query.executeUpdate();
 
@@ -70,6 +68,7 @@ public class DocumentPublishService {
      * 지정된 Document들을 미배포 상태로 변경 (게시 취소 시 사용)
      * 
      * @param documentIds 미배포로 변경할 Document ID 목록
+     * @throws RuntimeException 상태 변경 실패 시 (트랜잭션 롤백을 위해 예외 전파)
      */
     @Transactional
     public void markAsUnpublished(List<String> documentIds) {
@@ -78,19 +77,22 @@ public class DocumentPublishService {
         }
 
         try {
-            String sql = "UPDATE documents SET is_published = false WHERE id IN (:ids)";
+            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
+            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(:ids)";
             Query query = entityManager.createNativeQuery(sql);
 
-            List<UUID> uuidList = documentIds.stream()
+            UUID[] uuidArray = documentIds.stream()
                     .map(UUID::fromString)
-                    .toList();
+                    .toArray(UUID[]::new);
 
-            query.setParameter("ids", uuidList);
+            query.setParameter("ids", uuidArray);
             int updatedCount = query.executeUpdate();
             log.info("Stolink DB publication status reverted (is_published=false). count={}, ids={}", updatedCount,
                     documentIds);
         } catch (Exception e) {
             log.error("Failed to revert Stolink documents status: " + e.getMessage(), e);
+            // 예외 삼킴 방지: 상위 트랜잭션에 전파하여 데이터 불일치 방지
+            throw new RuntimeException("Stolink DB status revert failed", e);
         }
     }
 }
