@@ -132,6 +132,8 @@ jobs:
           # 브랜치에 따라 프로파일 및 이미지 태그 결정
           SPRING_PROFILE: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
           IMAGE_TAG: ${{ github.ref == 'refs/heads/main' && 'latest' || 'dev-latest' }}
+          # 운영 환경에서는 localhost 제외 (보안 강화)
+          CORS_ORIGINS: ${{ github.ref == 'refs/heads/main' && format('https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) || format('http://localhost:3000,http://localhost:5173,http://localhost:5174,https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) }}
         run: |
           # .env 파일 내용 생성
           ENV_CONTENT="POSTGRESQL_URL=${POSTGRESQL_URL}
@@ -143,7 +145,7 @@ jobs:
           NEO4J_PASSWORD=${NEO4J_PASSWORD}
           NEO4J_PORT=${NEO4J_PORT}
           IMAGE_NAME=ghcr.io/stolink/storead-spring:${IMAGE_TAG}
-          CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174,https://${CLOUDFRONT_URL},https://${STOREAD_CLOUDFRONT_URL}
+          CORS_ALLOWED_ORIGINS=${CORS_ORIGINS}
           OAUTH2_REDIRECT_URI=https://${STOREAD_CLOUDFRONT_URL}/oauth2/callback
           GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
           GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
