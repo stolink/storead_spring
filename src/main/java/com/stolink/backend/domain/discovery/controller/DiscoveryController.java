@@ -70,9 +70,12 @@ public class DiscoveryController {
                 String sortProperty = sort;
 
                 // 정렬 필드 매핑
+                // - latest: 생성일 기준 (최신순)
                 // - popular: 좋아요 수 기준
                 // - rating: 평균 별점 기준 (ratingSum 대신 averageRating 사용하여 정확한 평점 정렬)
-                if ("popular".equalsIgnoreCase(sort)) {
+                if ("latest".equalsIgnoreCase(sort)) {
+                        sortProperty = "createdAt";
+                } else if ("popular".equalsIgnoreCase(sort)) {
                         sortProperty = "likeCount";
                 } else if ("rating".equalsIgnoreCase(sort)) {
                         sortProperty = "averageRating";
