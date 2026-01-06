@@ -9,11 +9,10 @@ spring:
 
   # Production JPA settings
   jpa:
-    hibernate:
-      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
+        ddl-auto: validate
         format_sql: false
 
   # Google OAuth2 Configuration
@@ -25,14 +24,21 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: email, profile
+            redirect-uri: "{baseUrl}/api/login/oauth2/code/{registrationId}"
 
-# JWT Configuration
+# JWT Configuration (shared with stolink_spring)
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiry: 1800000 # 30분 (ms)
   refresh-token-expiry: 604800000 # 7일 (ms)
   cookie-domain: ${JWT_COOKIE_DOMAIN}
   cookie-secure: true # HTTPS 환경
+
+# OAuth2 Configuration
+oauth2:
+  redirect-uri: ${OAUTH2_REDIRECT_URI}
+  default-failure-url: ${OAUTH2_DEFAULT_FAILURE_URL}
+  allowed-redirect-hosts: ${OAUTH2_ALLOWED_REDIRECT_HOSTS}
 
 # Application Configuration
 app:
@@ -41,16 +47,13 @@ app:
   storage:
     base-path: ${APP_STORAGE_BASE_PATH:/app/storage/uploads}
 
-# OAuth2 Configuration
-oauth2:
-  redirect-uri: ${OAUTH2_REDIRECT_URI}
-
 # Production Logging
 logging:
   level:
-    com.stolink: WARN
+    com.stolink: INFO
     org.springframework.web: WARN
     org.hibernate.SQL: WARN
+    org.springframework.security: WARN
 
 # Actuator Configuration
 management:
