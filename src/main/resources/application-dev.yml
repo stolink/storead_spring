@@ -9,10 +9,11 @@ spring:
 
   # Development JPA settings
   jpa:
+    hibernate:
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        ddl-auto: update
         format_sql: false
 
   # Google OAuth2 Configuration
