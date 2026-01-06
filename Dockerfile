@@ -1,27 +1,5 @@
-# Build stage
-FROM amazoncorretto:21-alpine AS builder
-
-WORKDIR /app
-
-# Copy gradle files
-COPY gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
-
-# Convert Windows line endings to Unix and make gradlew executable
-RUN sed -i 's/\r$//' ./gradlew && chmod +x ./gradlew
-
-# Download dependencies
-RUN ./gradlew dependencies --no-daemon
-
-# Copy source code
-COPY src src
-
-# Build the application
-RUN ./gradlew bootJar --no-daemon -x test
-
-# Runtime stage
+# Runtime stage - GitHub Actions에서 빌드된 JAR만 복사
+# Multi-stage 빌드 제거: Maven Central rate limiting 회피 및 빌드 캐시 활용
 FROM amazoncorretto:21-alpine
 
 WORKDIR /app
@@ -35,8 +13,8 @@ RUN addgroup -S spring && adduser -S spring -G spring
 # Create storage directory
 RUN mkdir -p /app/storage/uploads && chown -R spring:spring /app
 
-# Copy jar from builder
-COPY --from=builder /app/build/libs/*.jar app.jar
+# Copy pre-built jar file from context (built by GitHub Actions)
+COPY --chown=spring:spring build/libs/*.jar app.jar
 
 # Switch to non-root user
 USER spring:spring
