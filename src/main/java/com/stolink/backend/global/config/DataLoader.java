@@ -96,285 +96,293 @@ public class DataLoader implements CommandLineRunner {
          * - 기존 작가 3명을 순환하며 할당
          * - 진짜 소설 같은 제목과 시놉시스 사용
          */
+        /**
+         * 테스트 작품 생성 (각 장르별 6개, 총 30개)
+         * - 기존 작가 3명을 순환하며 할당 (모듈러 연산으로 안전한 인덱스 접근)
+         * - 진짜 소설 같은 제목과 시놉시스 사용
+         * - saveAll()을 사용한 배치 삽입으로 성능 최적화
+         */
         private List<Work> createTestWorks(List<User> users) {
                 List<Work> works = new ArrayList<>();
+                int userCount = users.size();
 
                 // ===================== FANTASY 장르 (6개) =====================
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("용과 마법사의 전설")
                                 .synopsis("평범한 대학생이었던 주인공이 이세계로 소환되어 전설의 용과 함께 마왕을 물리치는 이야기. 치열한 전투와 감동적인 우정, 그리고 성장의 이야기가 펼쳐집니다.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy1/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("마탑주의 회귀")
                                 .synopsis("대마법사로 군림했던 주인공이 의문의 죽음을 맞이하고 100년 전 수련생 시절로 돌아간다. 미래의 기억을 바탕으로 이번 생에서는 다른 선택을 한다.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy2/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("엘프 왕국의 검은 기사")
                                 .synopsis("인간계에서 추방당한 기사가 우연히 엘프 왕국을 발견한다. 두 세계 사이에서 벌어지는 대전쟁, 그리고 금지된 사랑의 이야기.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy3/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("던전에서 레벨업")
                                 .synopsis("갑작스럽게 출현한 던전과 각성자들. 최하위 랭크 각성자였던 주인공이 유일무이한 능력을 얻으며 세계 최강으로 성장해 나가는 이야기.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy4/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("천년 후의 마법사")
                                 .synopsis("마법의 시대가 끝난 천년 후 미래에서 깨어난 고대 마법사. 과학과 마법이 충돌하는 세계에서 새로운 시대를 열어간다.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy5/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("최강 마법검사")
                                 .synopsis("마법과 검술을 동시에 다루는 천재가 세계의 불가사의를 탐험하며 성장하는 이야기. 미지의 던전에서 숨겨진 보물을 찾아나선다.")
                                 .coverImageUrl("https://picsum.photos/seed/fantasy6/400/600")
                                 .genre(Genre.FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
                 // ===================== ROMANCE 장르 (6개) =====================
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("사랑의 계절")
                                 .synopsis("봄, 여름, 가을, 겨울... 사계절 속에서 피어나는 두 남녀의 아름다운 사랑 이야기. 운명적인 만남부터 시련을 극복하기까지의 여정을 담았습니다.")
                                 .coverImageUrl("https://picsum.photos/seed/romance1/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("비 오는 날의 카페")
                                 .synopsis("작은 동네 카페에서 우연히 마주친 두 사람. 비가 오는 날마다 만나게 되는 그들의 이야기. 서툴지만 진심을 담은 사랑이 시작됩니다.")
                                 .coverImageUrl("https://picsum.photos/seed/romance2/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("첫사랑의 재회")
                                 .synopsis("10년 만에 재회한 첫사랑. 서로 다른 삶을 살아왔지만 여전히 가슴 뛰는 감정은 변하지 않았다. 어른이 되어 다시 시작하는 사랑.")
                                 .coverImageUrl("https://picsum.photos/seed/romance3/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("대기업 CEO와 비서")
                                 .synopsis("냉철하기로 유명한 대기업 CEO와 그의 새로운 비서. 업무적인 관계가 점차 달콤한 로맨스로 발전하는 오피스 러브.")
                                 .coverImageUrl("https://picsum.photos/seed/romance4/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("소꿉친구와의 계약 연애")
                                 .synopsis("부모님의 성화에 못 이겨 소꿉친구와 가짜 연애를 시작했다. 그런데 가짜였던 감정이 점점 진짜가 되어가는데...")
                                 .coverImageUrl("https://picsum.photos/seed/romance5/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("달빛 아래 프러포즈")
                                 .synopsis("여행 중 우연히 만난 두 사람. 짧은 만남이 평생의 인연이 될 줄은 몰랐다. 운명 같은 재회와 로맨틱한 고백의 순간.")
                                 .coverImageUrl("https://picsum.photos/seed/romance6/400/600")
                                 .genre(Genre.ROMANCE)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
                 // ===================== MARTIAL_ARTS 무협 장르 (6개) =====================
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("천하제일검")
                                 .synopsis("무림맹주의 후계자인 주인공이 복수와 정의 사이에서 갈등하며 천하제일의 검객으로 성장해 나가는 이야기. 화려한 무공과 긴장감 넘치는 대결이 펼쳐집니다.")
                                 .coverImageUrl("https://picsum.photos/seed/martial1/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("철혈무쌍")
                                 .synopsis("마교의 성물을 차지하기 위한 정파와 사파의 대격돌. 그 중심에서 양 세력이 모두 두려워하는 한 남자가 있었다.")
                                 .coverImageUrl("https://picsum.photos/seed/martial2/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("협객행")
                                 .synopsis("부모의 원수를 갚기 위해 15년간 검을 닦아온 청년. 마침내 강호에 발을 내딛는 그의 복수극이 시작된다.")
                                 .coverImageUrl("https://picsum.photos/seed/martial3/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("용봉쟁패기")
                                 .synopsis("북궁세가의 천재와 남궁세가의 영재. 강호를 양분할 두 천재의 운명적인 대결, 그리고 예상치 못한 우정.")
                                 .coverImageUrl("https://picsum.photos/seed/martial4/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("개방천하")
                                 .synopsis("거지 출신으로 무림의 정점에 오른 한 남자의 일대기. 가진 것 없이 시작했지만 천하를 품에 안는다.")
                                 .coverImageUrl("https://picsum.photos/seed/martial5/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("비검도")
                                 .synopsis("비 오는 날에만 사용할 수 있는 전설의 검법. 그 비기를 전수받은 젊은이가 강호에 새로운 전설을 쓴다.")
                                 .coverImageUrl("https://picsum.photos/seed/martial6/400/600")
                                 .genre(Genre.MARTIAL_ARTS)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
                 // ===================== MODERN_FANTASY 현대판타지 (6개) =====================
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("서울의 마법사")
                                 .synopsis("현대 서울에 숨겨진 마법 사회. 평범한 직장인인 주인공이 우연히 마법 능력을 각성하고 도시의 어둠과 맞서 싸우는 도시 판타지.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy1/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("헌터즈 월드")
                                 .synopsis("전 세계에 던전이 출현했다. 각성자가 된 평범한 고등학생의 성장 서사. 학교와 던전을 오가며 세계를 구한다.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy2/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("망자의 눈")
                                 .synopsis("사고 이후 죽은 자들이 보이게 된 청년. 그들의 미련을 풀어주며 현대 도시의 숨겨진 미스터리를 파헤친다.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy3/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("강남 뱀파이어")
                                 .synopsis("강남 클럽가를 지배하는 뱀파이어 패밀리. 그들 사이에 뛰어든 인간 여대생의 위험하고도 달콤한 밤생활.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy4/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("퇴마사 사무소")
                                 .synopsis("을지로의 낡은 빌딩에 자리한 비밀 퇴마사 사무소. 도시의 기묘한 사건들을 해결하는 퇴마사들의 일상과 사건 해결기.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy5/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("소서러 인 서울")
                                 .synopsis("서울 한복판에서 마법 전쟁이 일어난다. 도시를 지키기 위해 나선 현대 마법사들의 액션 판타지.")
                                 .coverImageUrl("https://picsum.photos/seed/modernfantasy6/400/600")
                                 .genre(Genre.MODERN_FANTASY)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
                 // ===================== MYSTERY 미스터리 (6개) =====================
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("밀실의 비밀")
                                 .synopsis("밀폐된 저택에서 발생한 불가능 살인. 천재 탐정과 함께 숨겨진 진실을 파헤치는 스릴러 미스터리. 예상치 못한 반전이 독자들을 기다립니다.")
                                 .coverImageUrl("https://picsum.photos/seed/mystery1/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("검은 편지")
                                 .synopsis("익명의 협박 편지를 받은 사람들이 하나 둘 의문사한다. 과거의 비밀과 현재의 죄가 교차하는 심리 스릴러.")
                                 .coverImageUrl("https://picsum.photos/seed/mystery2/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("마지막 증인")
                                 .synopsis("교통사고 목격자가 연쇄적으로 사라지고 있다. 마지막 생존 목격자인 주인공의 생존을 건 추격전.")
                                 .coverImageUrl("https://picsum.photos/seed/mystery3/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(0))
+                works.add(Work.builder()
+                                .author(users.get(0 % userCount))
                                 .title("새벽 2시의 방문자")
                                 .synopsis("매일 새벽 2시, 누군가 문을 두드린다. 하지만 CCTV에는 아무도 찍히지 않는다. 오래된 아파트에 숨겨진 비밀.")
                                 .coverImageUrl("https://picsum.photos/seed/mystery4/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(1))
+                works.add(Work.builder()
+                                .author(users.get(1 % userCount))
                                 .title("쌍둥이 자매의 고백")
                                 .synopsis("쌍둥이 자매 중 한 명이 살해당했다. 생존자의 증언과 엇갈리는 증거들. 과연 범인은 누구인가?")
                                 .coverImageUrl("https://picsum.photos/seed/mystery5/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.COMPLETED)
-                                .build()));
+                                .build());
 
-                works.add(workRepository.save(Work.builder()
-                                .author(users.get(2))
+                works.add(Work.builder()
+                                .author(users.get(2 % userCount))
                                 .title("그 해 겨울의 진실")
                                 .synopsis("10년 전 겨울, 한 마을에서 일어난 대형 실종 사건. 당시 어린이였던 주인공이 성인이 되어 진실을 파헤치기 시작한다.")
                                 .coverImageUrl("https://picsum.photos/seed/mystery6/400/600")
                                 .genre(Genre.MYSTERY)
                                 .status(WorkStatus.ONGOING)
-                                .build()));
+                                .build());
 
-                return works;
+                // 배치 삽입으로 성능 최적화: 개별 save() 대신 saveAll() 사용
+                return workRepository.saveAll(works);
         }
 
         /**
