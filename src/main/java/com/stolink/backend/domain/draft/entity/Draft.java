@@ -7,6 +7,7 @@ import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,7 +16,7 @@ import java.util.UUID;
  * storead에서는 조회/삭제 기능만 사용
  * 
  * @Immutable: 이 엔티티는 읽기/삭제 전용.
- * Hibernate가 UPDATE 쿼리를 생성하지 않으며, DDL 변경 위험을 최소화.
+ *             Hibernate가 UPDATE 쿼리를 생성하지 않으며, DDL 변경 위험을 최소화.
  */
 @Entity
 @Table(name = "drafts")
@@ -30,10 +31,20 @@ public class Draft {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "document_id", nullable = false)
+    // 기존 단일 Document ID (하위 호환성 유지)
+    @Column(name = "document_id")
     private String documentId;
 
-    @Column(name = "project_id", nullable = false)
+    // 다중 Document ID 배열 (신규 Bulk 배포용)
+    @Type(JsonType.class)
+    @Column(name = "document_ids", columnDefinition = "jsonb")
+    private List<String> documentIds;
+
+    // 병합 배포 여부
+    @Column(name = "is_merged")
+    private Boolean isMerged;
+
+    @Column(name = "project_id")
     private String projectId;
 
     private String title;
@@ -69,5 +80,15 @@ public class Draft {
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
+    }
+
+    /**
+     * 호환성 레이어: documentIds 조회 시 기존 documentId도 포함하여 반환
+     */
+    public List<String> getAllDocumentIds() {
+        if (documentIds != null && !documentIds.isEmpty()) {
+            return documentIds;
+        }
+        return documentId != null ? List.of(documentId) : List.of();
     }
 }

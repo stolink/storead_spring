@@ -45,5 +45,27 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
 
         void deleteByWorkId(UUID workId);
 
+        /**
+         * 시나리오 A, B용: 단일 documentId 필드에서 중복 체크
+         */
         boolean existsByWorkIdAndDocumentId(UUID workId, String documentId);
+
+        /**
+         * 시나리오 C용: documentIds JSONB 배열에서 중복 체크
+         * 특정 Work 내에 주어진 documentId가 포함된 Chapter가 존재하는지 확인
+         * 
+         * 주의: PostgreSQL의 ::text 캐스팅 문법은 Spring Data JPA의 :paramName과 충돌하므로
+         * CAST() 함수를 사용해야 함
+         * 
+         * @param workId     작품 ID
+         * @param documentId 확인할 문서 ID
+         * @return 해당 문서 ID가 이미 게시된 경우 true
+         */
+        @Query(value = "SELECT EXISTS(" +
+                        "SELECT 1 FROM chapters c " +
+                        "WHERE c.work_id = :workId " +
+                        "AND c.document_ids @> jsonb_build_array(CAST(:documentId AS text))" +
+                        ")", nativeQuery = true)
+        boolean existsByWorkIdAndDocumentIdInArray(@Param("workId") UUID workId,
+                        @Param("documentId") String documentId);
 }
