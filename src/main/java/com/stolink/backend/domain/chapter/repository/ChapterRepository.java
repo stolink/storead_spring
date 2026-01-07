@@ -82,7 +82,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                         "SELECT 1 FROM chapters c " +
                         "WHERE c.work_id = :workId " +
                         "AND (c.document_id = ANY(CAST(:docIds AS text[])) " +
-                        "OR c.document_ids ?| CAST(:docIds AS text[]))" +
+                        "OR c.document_ids ??| CAST(:docIds AS text[]))" +
                         ")", nativeQuery = true)
         boolean existsByWorkIdAndAnyDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") String[] docIds);
@@ -99,7 +99,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                         "WHERE c.work_id = :workId AND c.document_id = ANY(CAST(:docIds AS text[])) " +
                         "UNION " +
                         "SELECT jsonb_array_elements_text(c.document_ids) AS doc_id FROM chapters c " +
-                        "WHERE c.work_id = :workId AND c.document_ids ?| CAST(:docIds AS text[])" +
+                        "WHERE c.work_id = :workId AND c.document_ids ??| CAST(:docIds AS text[])" +
                         ") d WHERE d.doc_id = ANY(CAST(:docIds AS text[]))", nativeQuery = true)
         List<String> findDuplicateDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") String[] docIds);
