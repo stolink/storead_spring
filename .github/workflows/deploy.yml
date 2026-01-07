@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - main # production 환경
+      - release # production 환경
       - dev # develop 환경
 
 concurrency:
@@ -41,7 +41,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     # 브랜치에 따라 환경 자동 선택
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
+    environment: ${{ github.ref == 'refs/heads/release' && 'production' || 'develop' }}
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
     steps:
@@ -80,8 +80,8 @@ jobs:
         with:
           images: ghcr.io/stolink/storead-spring
           tags: |
-            type=raw,value=${{ github.ref == 'refs/heads/main' && 'latest' || 'dev-latest' }}
-            type=sha,prefix=${{ github.ref == 'refs/heads/main' && '' || 'dev-' }}
+            type=raw,value=${{ github.ref == 'refs/heads/release' && 'latest' || 'dev-latest' }}
+            type=sha,prefix=${{ github.ref == 'refs/heads/release' && '' || 'dev-' }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -98,7 +98,7 @@ jobs:
     needs: [test, build-and-push]
     runs-on: ubuntu-latest
     # 브랜치에 따라 환경 자동 선택
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
+    environment: ${{ github.ref == 'refs/heads/release' && 'production' || 'develop' }}
     steps:
       - name: Checkout (for docker-compose.yml only)
         uses: actions/checkout@v4
@@ -130,10 +130,10 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GH_PAT: ${{ secrets.GH_PAT }}
           # 브랜치에 따라 프로파일 및 이미지 태그 결정
-          SPRING_PROFILE: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-          IMAGE_TAG: ${{ github.ref == 'refs/heads/main' && 'latest' || 'dev-latest' }}
+          SPRING_PROFILE: ${{ github.ref == 'refs/heads/release' && 'prod' || 'dev' }}
+          IMAGE_TAG: ${{ github.ref == 'refs/heads/release' && 'latest' || 'dev-latest' }}
           # 운영 환경에서는 localhost 제외 (보안 강화)
-          CORS_ORIGINS: ${{ github.ref == 'refs/heads/main' && format('https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) || format('http://localhost:3000,http://localhost:5173,http://localhost:5174,https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) }}
+          CORS_ORIGINS: ${{ github.ref == 'refs/heads/release' && format('https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) || format('http://localhost:3000,http://localhost:5173,http://localhost:5174,https://{0},https://{1}', vars.CLOUDFRONT_URL, vars.STOREAD_CLOUDFRONT_URL) }}
         run: |
           # .env 파일 내용 생성
           ENV_CONTENT="POSTGRESQL_URL=${POSTGRESQL_URL}
@@ -161,8 +161,8 @@ jobs:
           COMPOSE_BASE64=$(echo "$COMPOSE_CONTENT" | base64 -w 0)
 
           # SSM 명령 실행 및 Command ID 캡처
-          # dev 브랜치: dev-storead-spring 태그, main 브랜치: storead-spring 태그
-          EC2_TAG=${{ github.ref == 'refs/heads/main' && 'storead-spring' || 'dev-storead-spring' }}
+          # dev 브랜치: dev-storead-spring 태그, release 브랜치: storead-spring 태그
+          EC2_TAG=${{ github.ref == 'refs/heads/release' && 'storead-spring' || 'dev-storead-spring' }}
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
