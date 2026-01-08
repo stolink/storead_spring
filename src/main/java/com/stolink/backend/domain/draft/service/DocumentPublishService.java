@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +27,7 @@ public class DocumentPublishService {
      * 지정된 Document들을 게시 완료 상태로 변경
      * 
      * @param documentIds 게시 완료된 Document ID 목록
+     * @throws IllegalArgumentException UUID 형식이 잘못된 경우
      */
     @Transactional
     public void markAsPublished(List<String> documentIds) {
@@ -38,17 +39,19 @@ public class DocumentPublishService {
         log.info("Attempting to update Stolink documents status to is_published=true for IDs: {}", documentIds);
 
         try {
-            // String UUID를 UUID 배열로 변환 (PostgreSQL ANY() 함수용)
-            UUID[] uuidArray = documentIds.stream()
-                    .map(UUID::fromString)
-                    .toArray(UUID[]::new);
+            // 사전 검증: 모든 ID의 UUID 형식 확인
+            List<UUID> uuids = parseAndValidateUuids(documentIds);
+            
+            if (uuids.isEmpty()) {
+                log.warn("No valid UUIDs found in documentIds: {}", documentIds);
+                return;
+            }
 
-            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(:ids)";
-            Query query = entityManager.createNativeQuery(sql);
-            query.setParameter("ids", uuidArray);
-
-            int updatedCount = query.executeUpdate();
+            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
+            String sql = "UPDATE documents SET is_published = true WHERE id IN (:ids)";
+            int updatedCount = entityManager.createNativeQuery(sql)
+                    .setParameter("ids", uuids)
+                    .executeUpdate();
 
             if (updatedCount == 0) {
                 log.warn("Stolink DB update returned 0 rows affected. IDs might be missing in 'documents' table: {}",
@@ -77,16 +80,20 @@ public class DocumentPublishService {
         }
 
         try {
-            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
-            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(:ids)";
-            Query query = entityManager.createNativeQuery(sql);
+            // 사전 검증: 모든 ID의 UUID 형식 확인
+            List<UUID> uuids = parseAndValidateUuids(documentIds);
+            
+            if (uuids.isEmpty()) {
+                log.warn("No valid UUIDs found in documentIds for unpublish: {}", documentIds);
+                return;
+            }
 
-            UUID[] uuidArray = documentIds.stream()
-                    .map(UUID::fromString)
-                    .toArray(UUID[]::new);
+            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
+            String sql = "UPDATE documents SET is_published = false WHERE id IN (:ids)";
+            int updatedCount = entityManager.createNativeQuery(sql)
+                    .setParameter("ids", uuids)
+                    .executeUpdate();
 
-            query.setParameter("ids", uuidArray);
-            int updatedCount = query.executeUpdate();
             log.info("Stolink DB publication status reverted (is_published=false). count={}, ids={}", updatedCount,
                     documentIds);
         } catch (Exception e) {
@@ -94,5 +101,26 @@ public class DocumentPublishService {
             // 예외 삼킴 방지: 상위 트랜잭션에 전파하여 데이터 불일치 방지
             throw new RuntimeException("Stolink DB status revert failed", e);
         }
+    }
+
+    /**
+     * 문자열 ID 목록을 UUID로 파싱 및 검증
+     * 잘못된 형식의 ID는 경고 로그를 남기고 건너뜀
+     * 
+     * @param documentIds 문자열 형태의 UUID 목록
+     * @return 유효한 UUID 목록
+     */
+    private List<UUID> parseAndValidateUuids(List<String> documentIds) {
+        List<UUID> validUuids = new ArrayList<>();
+        
+        for (String docId : documentIds) {
+            try {
+                validUuids.add(UUID.fromString(docId));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid UUID format skipped: {}", docId);
+            }
+        }
+        
+        return validUuids;
     }
 }
