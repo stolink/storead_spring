@@ -41,14 +41,15 @@ public class DocumentPublishService {
         try {
             // 사전 검증: 모든 ID의 UUID 형식 확인
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            
+
             if (uuids.isEmpty()) {
                 log.warn("No valid UUIDs found in documentIds: {}", documentIds);
                 return;
             }
 
-            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
-            String sql = "UPDATE documents SET is_published = true WHERE id IN (:ids)";
+            // PostgreSQL Native Query에서 IN (:ids) 방식보다 안전한 ANY 방식을 사용합니다.
+            // 명시적 캐스팅(uuid[])을 추가하여 바인딩 오류를 방지합니다.
+            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)
                     .setParameter("ids", uuids)
                     .executeUpdate();
@@ -82,14 +83,14 @@ public class DocumentPublishService {
         try {
             // 사전 검증: 모든 ID의 UUID 형식 확인
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            
+
             if (uuids.isEmpty()) {
                 log.warn("No valid UUIDs found in documentIds for unpublish: {}", documentIds);
                 return;
             }
 
-            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
-            String sql = "UPDATE documents SET is_published = false WHERE id IN (:ids)";
+            // PostgreSQL Native Query에서 IN (:ids) 방식보다 안전한 ANY 방식을 사용합니다.
+            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)
                     .setParameter("ids", uuids)
                     .executeUpdate();
@@ -112,7 +113,7 @@ public class DocumentPublishService {
      */
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
         List<UUID> validUuids = new ArrayList<>();
-        
+
         for (String docId : documentIds) {
             try {
                 validUuids.add(UUID.fromString(docId));
@@ -120,7 +121,7 @@ public class DocumentPublishService {
                 log.warn("Invalid UUID format skipped: {}", docId);
             }
         }
-        
+
         return validUuids;
     }
 }

@@ -53,13 +53,6 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
         /**
          * 시나리오 C용: documentIds JSONB 배열에서 중복 체크
          * 특정 Work 내에 주어진 documentId가 포함된 Chapter가 존재하는지 확인
-         * 
-         * 주의: PostgreSQL의 ::text 캐스팅 문법은 Spring Data JPA의 :paramName과 충돌하므로
-         * CAST() 함수를 사용해야 함
-         * 
-         * @param workId     작품 ID
-         * @param documentId 확인할 문서 ID
-         * @return 해당 문서 ID가 이미 게시된 경우 true
          */
         @Query(value = "SELECT EXISTS(" +
                         "SELECT 1 FROM chapters c " +
@@ -72,9 +65,8 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
         /**
          * 일괄 중복 체크: 여러 documentId를 한 번의 쿼리로 검증 (N+1 방지)
          * 
-         * 단일 document_id 컬럼(VARCHAR)과 document_ids JSONB 배열 모두에서 확인
-         * - document_id 컬럼: text 타입이므로 직접 IN 비교 가능
-         * - document_ids 배열: PostgreSQL ?| 연산자로 GIN 인덱스 활용
+         * Native Query의 ??| 연산자 파싱 오류(502 에러 원인 추정)를 방지하기 위해
+         * PostgreSQL 표준 함수인 jsonb_exists_any()를 사용합니다.
          * 
          * @param workId 작품 ID
          * @param docIds 확인할 문서 ID 목록 (List<String>)
@@ -84,7 +76,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                         "SELECT 1 FROM chapters c " +
                         "WHERE c.work_id = :workId " +
                         "AND (c.document_id IN (:docIds) " +
-                        "OR c.document_ids ??| CAST(:docIds AS text[]))" +
+                        "OR jsonb_exists_any(c.document_ids, CAST(:docIds AS text[])))" +
                         ")", nativeQuery = true)
         boolean existsByWorkIdAndAnyDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") List<String> docIds);
@@ -92,9 +84,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
         /**
          * 일괄 중복 체크: 중복된 문서 ID 목록 반환 (에러 메시지용)
          * 
-         * 단일 document_id 컬럼(VARCHAR)과 document_ids JSONB 배열 모두에서 확인
-         * - document_id 컬럼: text 타입이므로 직접 IN 비교
-         * - document_ids 배열: PostgreSQL ?| 연산자로 GIN 인덱스 활용
+         * jsonb_exists_any() 함수를 사용하여 안전하게 GIN 인덱스를 활용합니다.
          * 
          * @param workId 작품 ID
          * @param docIds 확인할 문서 ID 목록 (List<String>)
@@ -105,7 +95,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
                         "WHERE c.work_id = :workId AND c.document_id IN (:docIds) " +
                         "UNION " +
                         "SELECT jsonb_array_elements_text(c.document_ids) AS doc_id FROM chapters c " +
-                        "WHERE c.work_id = :workId AND c.document_ids ??| CAST(:docIds AS text[])" +
+                        "WHERE c.work_id = :workId AND jsonb_exists_any(c.document_ids, CAST(:docIds AS text[]))" +
                         ") d WHERE d.doc_id IN (:docIds)", nativeQuery = true)
         List<String> findDuplicateDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") List<String> docIds);
