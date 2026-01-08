@@ -38,17 +38,20 @@ public class DocumentPublishService {
         log.info("Attempting to update Stolink documents status to is_published=true for IDs: {}", documentIds);
 
         try {
-            // String UUID를 UUID 배열로 변환 (PostgreSQL ANY() 함수용)
-            UUID[] uuidArray = documentIds.stream()
-                    .map(UUID::fromString)
-                    .toArray(UUID[]::new);
-
-            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(:ids)";
-            Query query = entityManager.createNativeQuery(sql);
-            query.setParameter("ids", uuidArray);
-
-            int updatedCount = query.executeUpdate();
+            // Hibernate는 UUID[]를 PostgreSQL uuid[]로 직접 변환하지 못하므로
+            // 각 UUID를 개별적으로 처리하거나 IN 절을 동적으로 생성해야 함
+            int updatedCount = 0;
+            for (String docId : documentIds) {
+                try {
+                    UUID uuid = UUID.fromString(docId);
+                    String sql = "UPDATE documents SET is_published = true WHERE id = :id";
+                    Query query = entityManager.createNativeQuery(sql);
+                    query.setParameter("id", uuid);
+                    updatedCount += query.executeUpdate();
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid UUID format: {}", docId);
+                }
+            }
 
             if (updatedCount == 0) {
                 log.warn("Stolink DB update returned 0 rows affected. IDs might be missing in 'documents' table: {}",
@@ -77,16 +80,20 @@ public class DocumentPublishService {
         }
 
         try {
-            // PostgreSQL ANY() 문법을 사용하여 IN 절 파라미터 바인딩 이슈 방지
-            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(:ids)";
-            Query query = entityManager.createNativeQuery(sql);
-
-            UUID[] uuidArray = documentIds.stream()
-                    .map(UUID::fromString)
-                    .toArray(UUID[]::new);
-
-            query.setParameter("ids", uuidArray);
-            int updatedCount = query.executeUpdate();
+            // Hibernate는 UUID[]를 PostgreSQL uuid[]로 직접 변환하지 못하므로
+            // 각 UUID를 개별적으로 처리
+            int updatedCount = 0;
+            for (String docId : documentIds) {
+                try {
+                    UUID uuid = UUID.fromString(docId);
+                    String sql = "UPDATE documents SET is_published = false WHERE id = :id";
+                    Query query = entityManager.createNativeQuery(sql);
+                    query.setParameter("id", uuid);
+                    updatedCount += query.executeUpdate();
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid UUID format: {}", docId);
+                }
+            }
             log.info("Stolink DB publication status reverted (is_published=false). count={}, ids={}", updatedCount,
                     documentIds);
         } catch (Exception e) {
