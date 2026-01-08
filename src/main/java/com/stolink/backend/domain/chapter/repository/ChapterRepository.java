@@ -73,18 +73,17 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
          * 일괄 중복 체크: 여러 documentId를 한 번의 쿼리로 검증 (N+1 방지)
          * 
          * 단일 document_id 컬럼과 document_ids JSONB 배열 모두에서 확인
-         * String[]을 사용해야 Hibernate가 PostgreSQL text[]로 올바르게 변환합니다.
+         * PostgreSQL의 ?| 연산자를 사용하여 GIN 인덱스 활용 최적화
          * 
          * @param workId 작품 ID
-         * @param docIds 확인할 문서 ID 배열
+         * @param docIds 확인할 문서 ID 목록 (List<String>)
          * @return 이미 게시된 문서 ID가 하나라도 존재하면 true
          */
         @Query(value = "SELECT EXISTS(" +
                         "SELECT 1 FROM chapters c " +
                         "WHERE c.work_id = :workId " +
                         "AND (c.document_id IN (:docIds) " +
-                        "OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(c.document_ids) elem WHERE elem IN (:docIds)))"
-                        +
+                        "OR c.document_ids ??| CAST(ARRAY(SELECT unnest(CAST(:docIds AS text[]))) AS text[]))" +
                         ")", nativeQuery = true)
         boolean existsByWorkIdAndAnyDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") List<String> docIds);
@@ -92,17 +91,21 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
         /**
          * 일괄 중복 체크: 중복된 문서 ID 목록 반환 (에러 메시지용)
          * 
+         * 단일 document_id 컬럼과 document_ids JSONB 배열 모두에서 확인
+         * PostgreSQL의 ?| 연산자를 사용하여 GIN 인덱스 활용 최적화
+         * 
          * @param workId 작품 ID
-         * @param docIds 확인할 문서 ID 배열
+         * @param docIds 확인할 문서 ID 목록 (List<String>)
          * @return 이미 게시된 문서 ID 목록
          */
         @Query(value = "SELECT DISTINCT d.doc_id FROM (" +
                         "SELECT c.document_id AS doc_id FROM chapters c " +
                         "WHERE c.work_id = :workId AND c.document_id IN (:docIds) " +
                         "UNION " +
-                        "SELECT elem AS doc_id FROM chapters c, jsonb_array_elements_text(c.document_ids) elem " +
-                        "WHERE c.work_id = :workId AND elem IN (:docIds)" +
-                        ") d", nativeQuery = true)
+                        "SELECT jsonb_array_elements_text(c.document_ids) AS doc_id FROM chapters c " +
+                        "WHERE c.work_id = :workId AND c.document_ids ??| CAST(ARRAY(SELECT unnest(CAST(:docIds AS text[]))) AS text[])"
+                        +
+                        ") d WHERE d.doc_id IN (:docIds)", nativeQuery = true)
         List<String> findDuplicateDocumentIds(@Param("workId") UUID workId,
                         @Param("docIds") List<String> docIds);
 }

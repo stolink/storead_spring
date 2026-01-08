@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +27,7 @@ public class DocumentPublishService {
      * 지정된 Document들을 게시 완료 상태로 변경
      * 
      * @param documentIds 게시 완료된 Document ID 목록
+     * @throws IllegalArgumentException UUID 형식이 잘못된 경우
      */
     @Transactional
     public void markAsPublished(List<String> documentIds) {
@@ -38,20 +39,19 @@ public class DocumentPublishService {
         log.info("Attempting to update Stolink documents status to is_published=true for IDs: {}", documentIds);
 
         try {
-            // Hibernate는 UUID[]를 PostgreSQL uuid[]로 직접 변환하지 못하므로
-            // 각 UUID를 개별적으로 처리하거나 IN 절을 동적으로 생성해야 함
-            int updatedCount = 0;
-            for (String docId : documentIds) {
-                try {
-                    UUID uuid = UUID.fromString(docId);
-                    String sql = "UPDATE documents SET is_published = true WHERE id = :id";
-                    Query query = entityManager.createNativeQuery(sql);
-                    query.setParameter("id", uuid);
-                    updatedCount += query.executeUpdate();
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid UUID format: {}", docId);
-                }
+            // 사전 검증: 모든 ID의 UUID 형식 확인
+            List<UUID> uuids = parseAndValidateUuids(documentIds);
+            
+            if (uuids.isEmpty()) {
+                log.warn("No valid UUIDs found in documentIds: {}", documentIds);
+                return;
             }
+
+            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
+            String sql = "UPDATE documents SET is_published = true WHERE id IN (:ids)";
+            int updatedCount = entityManager.createNativeQuery(sql)
+                    .setParameter("ids", uuids)
+                    .executeUpdate();
 
             if (updatedCount == 0) {
                 log.warn("Stolink DB update returned 0 rows affected. IDs might be missing in 'documents' table: {}",
@@ -80,20 +80,20 @@ public class DocumentPublishService {
         }
 
         try {
-            // Hibernate는 UUID[]를 PostgreSQL uuid[]로 직접 변환하지 못하므로
-            // 각 UUID를 개별적으로 처리
-            int updatedCount = 0;
-            for (String docId : documentIds) {
-                try {
-                    UUID uuid = UUID.fromString(docId);
-                    String sql = "UPDATE documents SET is_published = false WHERE id = :id";
-                    Query query = entityManager.createNativeQuery(sql);
-                    query.setParameter("id", uuid);
-                    updatedCount += query.executeUpdate();
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid UUID format: {}", docId);
-                }
+            // 사전 검증: 모든 ID의 UUID 형식 확인
+            List<UUID> uuids = parseAndValidateUuids(documentIds);
+            
+            if (uuids.isEmpty()) {
+                log.warn("No valid UUIDs found in documentIds for unpublish: {}", documentIds);
+                return;
             }
+
+            // 벌크 업데이트: Hibernate 6는 IN 절에 List 파라미터 바인딩 지원
+            String sql = "UPDATE documents SET is_published = false WHERE id IN (:ids)";
+            int updatedCount = entityManager.createNativeQuery(sql)
+                    .setParameter("ids", uuids)
+                    .executeUpdate();
+
             log.info("Stolink DB publication status reverted (is_published=false). count={}, ids={}", updatedCount,
                     documentIds);
         } catch (Exception e) {
@@ -101,5 +101,26 @@ public class DocumentPublishService {
             // 예외 삼킴 방지: 상위 트랜잭션에 전파하여 데이터 불일치 방지
             throw new RuntimeException("Stolink DB status revert failed", e);
         }
+    }
+
+    /**
+     * 문자열 ID 목록을 UUID로 파싱 및 검증
+     * 잘못된 형식의 ID는 경고 로그를 남기고 건너뜀
+     * 
+     * @param documentIds 문자열 형태의 UUID 목록
+     * @return 유효한 UUID 목록
+     */
+    private List<UUID> parseAndValidateUuids(List<String> documentIds) {
+        List<UUID> validUuids = new ArrayList<>();
+        
+        for (String docId : documentIds) {
+            try {
+                validUuids.add(UUID.fromString(docId));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid UUID format skipped: {}", docId);
+            }
+        }
+        
+        return validUuids;
     }
 }
