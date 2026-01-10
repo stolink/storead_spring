@@ -48,8 +48,8 @@ public class ChapterDuplicationChecker {
         // 2. 입력 docIds를 Set으로 변환하여 O(1) 조회
         Set<String> docIdSet = new HashSet<>(docIds);
 
-        // 3. 메모리에서 중복 체크
-        for (Chapter chapter : chapters) {
+        // 3. 메모리에서 중복 체크 (Stream API 활용)
+        return chapters.stream().anyMatch(chapter -> {
             // 단일 documentId 체크
             if (chapter.getDocumentId() != null && docIdSet.contains(chapter.getDocumentId())) {
                 log.debug("Duplicate found: documentId={} in chapterId={}",
@@ -67,7 +67,8 @@ public class ChapterDuplicationChecker {
                     }
                 }
             }
-        }
+            return false;
+        });
 
         return false;
     }

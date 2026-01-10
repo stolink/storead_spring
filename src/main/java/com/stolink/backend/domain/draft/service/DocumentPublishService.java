@@ -43,15 +43,13 @@ public class DocumentPublishService {
             }
 
             // 개별 UUID를 반복하며 업데이트 (안전한 방식)
-            int updatedCount = 0;
-            for (UUID uuid : uuids) {
-                log.debug("[DocumentPublishService] Attempting UPDATE for document id={}", uuid);
-                String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
-                updatedCount = entityManager.createNativeQuery(sql)
-                        .setParameter("ids", uuids)
-                        .executeUpdate();
-                log.info("[DocumentPublishService] UPDATE result: id={}, affected={}", uuid, updatedCount);
-            }
+            // 단일 벌크 업데이트 쿼리 실행
+            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
+            int updatedCount = entityManager.createNativeQuery(sql)
+                    .setParameter("ids", uuids)
+                    .executeUpdate();
+
+            log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
 
             // 명시적 flush 시도
             entityManager.flush();
@@ -79,7 +77,8 @@ public class DocumentPublishService {
 
         try {
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            if (uuids.isEmpty()) return;
+            if (uuids.isEmpty())
+                return;
 
             String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)
@@ -91,7 +90,7 @@ public class DocumentPublishService {
             log.error("Failed to revert Stolink documents status", e);
             throw new RuntimeException("Stolink DB status revert failed", e);
         }
-                
+
     }
 
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
