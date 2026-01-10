@@ -20,6 +20,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class ChapterDuplicationChecker {
 
     private final ChapterRepository chapterRepository;
@@ -69,8 +70,6 @@ public class ChapterDuplicationChecker {
             }
             return false;
         });
-
-        return false;
     }
 
     /**

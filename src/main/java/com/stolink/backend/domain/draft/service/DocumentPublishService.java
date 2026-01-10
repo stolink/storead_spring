@@ -51,11 +51,6 @@ public class DocumentPublishService {
 
             log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
 
-            // 명시적 flush 시도
-            entityManager.flush();
-            log.info("[DocumentPublishService] Flush completed. Total updatedCount={}, documentIds={}", updatedCount,
-                    documentIds);
-
             if (updatedCount == 0) {
                 log.error(
                         "[DocumentPublishService] WARNING: No documents were updated! Check if documents exist in stolink DB.");
