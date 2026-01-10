@@ -25,23 +25,45 @@ public class DocumentPublishService {
      */
     @Transactional
     public void markAsPublished(List<String> documentIds) {
+        log.info("[DocumentPublishService] markAsPublished called with documentIds={}", documentIds);
+
         if (documentIds == null || documentIds.isEmpty()) {
+            log.warn("[DocumentPublishService] documentIds is null or empty, skipping update");
             return;
         }
 
         try {
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            if (uuids.isEmpty()) return;
+            log.info("[DocumentPublishService] Parsed {} valid UUIDs from {} documentIds", uuids.size(),
+                    documentIds.size());
 
-            // ANY 구문을 사용하여 안정적인 벌크 업데이트 수행 (PostgreSQL 전용)
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
-            int updatedCount = entityManager.createNativeQuery(sql)
-                    .setParameter("ids", uuids)
-                    .executeUpdate();
+            if (uuids.isEmpty()) {
+                log.warn("[DocumentPublishService] No valid UUIDs after parsing, skipping update");
+                return;
+            }
 
-            log.info("Stolink DB publication status updated. count={}, ids={}", updatedCount, documentIds);
+            // 개별 UUID를 반복하며 업데이트 (안전한 방식)
+            int updatedCount = 0;
+            for (UUID uuid : uuids) {
+                log.debug("[DocumentPublishService] Attempting UPDATE for document id={}", uuid);
+                String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
+                updatedCount = entityManager.createNativeQuery(sql)
+                        .setParameter("ids", uuids)
+                        .executeUpdate();
+                log.info("[DocumentPublishService] UPDATE result: id={}, affected={}", uuid, updatedCount);
+            }
+
+            // 명시적 flush 시도
+            entityManager.flush();
+            log.info("[DocumentPublishService] Flush completed. Total updatedCount={}, documentIds={}", updatedCount,
+                    documentIds);
+
+            if (updatedCount == 0) {
+                log.error(
+                        "[DocumentPublishService] WARNING: No documents were updated! Check if documents exist in stolink DB.");
+            }
         } catch (Exception e) {
-            log.error("Failed to update Stolink documents status", e);
+            log.error("[DocumentPublishService] Failed to update Stolink documents status", e);
             throw new RuntimeException("Stolink DB update failed", e);
         }
     }
@@ -69,6 +91,7 @@ public class DocumentPublishService {
             log.error("Failed to revert Stolink documents status", e);
             throw new RuntimeException("Stolink DB status revert failed", e);
         }
+                
     }
 
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
