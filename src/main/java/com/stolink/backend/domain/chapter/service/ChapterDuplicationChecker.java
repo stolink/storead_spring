@@ -1,6 +1,6 @@
 package com.stolink.backend.domain.chapter.service;
 
-import com.stolink.backend.domain.chapter.entity.Chapter;
+import com.stolink.backend.domain.chapter.entity.projection.ChapterIdProjection;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,15 +39,18 @@ public class ChapterDuplicationChecker {
             return false;
         }
 
-        // 1. 해당 Work의 모든 챕터 조회 (한 번의 쿼리)
-        List<Chapter> chapters = chapterRepository.findByWorkIdOrderByChapterNumberAsc(workId);
+        // 1. 해당 Work의 모든 챕터 조회 (한 번의 쿼리 - Projection 사용으로 메모리 최적화)
+        // SELECT * 대신 필요한 ID 필드만 조회합니다 (약 95% 메모리 절약 예상)
+        List<ChapterIdProjection> chapters = chapterRepository.findAllProjectedByWorkIdOrderByChapterNumberAsc(workId);
 
         if (chapters.isEmpty()) {
             return false;
         }
 
         // 2. 입력 docIds를 Set으로 변환하여 O(1) 조회
-        Set<String> docIdSet = new HashSet<>(docIds);
+        // 초기 용량을 지정하여 리사이징 오버헤드 방지 (Load Factor 0.75 고려)
+        Set<String> docIdSet = new HashSet<>((int) (docIds.size() / 0.75) + 1);
+        docIdSet.addAll(docIds);
 
         // 3. 메모리에서 중복 체크 (Stream API 활용)
         return chapters.stream().anyMatch(chapter -> {
@@ -84,7 +87,7 @@ public class ChapterDuplicationChecker {
             return List.of();
         }
 
-        List<Chapter> chapters = chapterRepository.findByWorkIdOrderByChapterNumberAsc(workId);
+        List<ChapterIdProjection> chapters = chapterRepository.findAllProjectedByWorkIdOrderByChapterNumberAsc(workId);
 
         if (chapters.isEmpty()) {
             return List.of();
@@ -93,7 +96,7 @@ public class ChapterDuplicationChecker {
         Set<String> docIdSet = new HashSet<>(docIds);
         Set<String> duplicates = new LinkedHashSet<>(); // 순서 유지하면서 중복 제거
 
-        for (Chapter chapter : chapters) {
+        for (ChapterIdProjection chapter : chapters) {
             // 단일 documentId 체크
             if (chapter.getDocumentId() != null && docIdSet.contains(chapter.getDocumentId())) {
                 duplicates.add(chapter.getDocumentId());

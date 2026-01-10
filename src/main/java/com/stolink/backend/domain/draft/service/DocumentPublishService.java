@@ -42,7 +42,8 @@ public class DocumentPublishService {
                 return;
             }
 
-            // 개별 UUID를 반복하며 업데이트 (안전한 방식)
+            // 단일 벌크 업데이트 쿼리로 일괄 처리 (N+1 방지)
+            // 개별 UUID를 반복하지 않고 ANY 연산자로 한 번에 업데이트합니다.
             // 단일 벌크 업데이트 쿼리 실행
             String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)

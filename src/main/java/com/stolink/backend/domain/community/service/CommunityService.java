@@ -56,9 +56,8 @@ public class CommunityService {
         List<String> allDocumentIds = draft.getAllDocumentIds();
         log.info("Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
 
-        if (duplicationChecker.hasAnyDuplicates(work.getId(), allDocumentIds)) {
-            // 구체적인 중복 ID를 찾아서 에러 메시지에 포함
-            List<String> duplicates = duplicationChecker.findDuplicates(work.getId(), allDocumentIds);
+        List<String> duplicates = duplicationChecker.findDuplicates(work.getId(), allDocumentIds);
+        if (!duplicates.isEmpty()) {
             log.warn("Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(), duplicates);
             throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
                     "이미 게시된 챕터가 있습니다: " + String.join(", ", duplicates));

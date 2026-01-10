@@ -1,6 +1,7 @@
 package com.stolink.backend.domain.chapter.repository;
 
 import com.stolink.backend.domain.chapter.entity.Chapter;
+import com.stolink.backend.domain.chapter.entity.projection.ChapterIdProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,8 @@ import java.util.UUID;
 public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
 
         List<Chapter> findByWorkIdOrderByChapterNumberAsc(UUID workId);
+
+        List<ChapterIdProjection> findAllProjectedByWorkIdOrderByChapterNumberAsc(UUID workId);
 
         Optional<Chapter> findByIdAndWorkId(UUID id, UUID workId);
 
