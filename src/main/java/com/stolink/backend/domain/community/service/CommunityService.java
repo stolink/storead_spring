@@ -2,6 +2,7 @@ package com.stolink.backend.domain.community.service;
 
 import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
+import com.stolink.backend.domain.chapter.service.ChapterDuplicationChecker;
 import com.stolink.backend.domain.community.dto.CommunityPublishRequest;
 import com.stolink.backend.domain.community.dto.CommunityPublishResponse;
 import com.stolink.backend.domain.draft.entity.Draft;
@@ -32,6 +33,7 @@ public class CommunityService {
     private final WorkRepository workRepository;
     private final ChapterRepository chapterRepository;
     private final UserRepository userRepository;
+    private final ChapterDuplicationChecker duplicationChecker;
 
     /**
      * Draft 기반으로 Work(없으면 생성) + Chapter 생성
@@ -54,9 +56,8 @@ public class CommunityService {
         List<String> allDocumentIds = draft.getAllDocumentIds();
         log.info("Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
 
-        if (chapterRepository.existsByWorkIdAndAnyDocumentIds(work.getId(), allDocumentIds)) {
-            // 구체적인 중복 ID를 찾아서 에러 메시지에 포함
-            List<String> duplicates = chapterRepository.findDuplicateDocumentIds(work.getId(), allDocumentIds);
+        List<String> duplicates = duplicationChecker.findDuplicates(work.getId(), allDocumentIds);
+        if (!duplicates.isEmpty()) {
             log.warn("Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(), duplicates);
             throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
                     "이미 게시된 챕터가 있습니다: " + String.join(", ", duplicates));

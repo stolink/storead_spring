@@ -1,6 +1,7 @@
 package com.stolink.backend.domain.chapter.repository;
 
 import com.stolink.backend.domain.chapter.entity.Chapter;
+import com.stolink.backend.domain.chapter.entity.projection.ChapterIdProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,8 @@ import java.util.UUID;
 public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
 
         List<Chapter> findByWorkIdOrderByChapterNumberAsc(UUID workId);
+
+        List<ChapterIdProjection> findAllProjectedByWorkIdOrderByChapterNumberAsc(UUID workId);
 
         Optional<Chapter> findByIdAndWorkId(UUID id, UUID workId);
 
@@ -62,31 +65,7 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
         boolean existsByWorkIdAndDocumentIdInArray(@Param("workId") UUID workId,
                         @Param("documentId") String documentId);
 
-        /**
-         * 일괄 중복 체크: 여러 documentId를 한 번의 쿼리로 검증 (N+1 방지)
-         * 
-         * PostgreSQL 연산자(?) 대신 함수(jsonb_exists_any)를 사용하여 
-         * Spring Data JPA 쿼리 파싱 충돌(502 Bad Gateway 원인)을 원천 차단
-         */
-        @Query(value = "SELECT EXISTS(" +
-                        "SELECT 1 FROM chapters c " +
-                        "WHERE c.work_id = :workId " +
-                        "AND (c.document_id IN (:docIds) " +
-                        "OR jsonb_exists_any(c.document_ids, CAST(:docIds AS text[])))" +
-                        ")", nativeQuery = true)
-        boolean existsByWorkIdAndAnyDocumentIds(@Param("workId") UUID workId,
-                        @Param("docIds") List<String> docIds);
-
-        /**
-         * 일괄 중복 체크: 중복된 문서 ID 목록 반환 (에러 메시지용)
-         */
-        @Query(value = "SELECT DISTINCT d.doc_id FROM (" +
-                        "SELECT c.document_id AS doc_id FROM chapters c " +
-                        "WHERE c.work_id = :workId AND c.document_id IN (:docIds) " +
-                        "UNION " +
-                        "SELECT jsonb_array_elements_text(c.document_ids) AS doc_id FROM chapters c " +
-                        "WHERE c.work_id = :workId AND jsonb_exists_any(c.document_ids, CAST(:docIds AS text[]))" +
-                        ") d WHERE d.doc_id IN (:docIds)", nativeQuery = true)
-        List<String> findDuplicateDocumentIds(@Param("workId") UUID workId,
-                        @Param("docIds") List<String> docIds);
+        // 참고: existsByWorkIdAndAnyDocumentIds, findDuplicateDocumentIds 메서드는
+        // Spring Data JPA가 List<String>을 PostgreSQL text[]로 변환할 수 없어 500 에러가 발생했습니다.
+        // 해당 로직은 ChapterDuplicationChecker 서비스로 이동되었습니다.
 }

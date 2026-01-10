@@ -25,23 +25,39 @@ public class DocumentPublishService {
      */
     @Transactional
     public void markAsPublished(List<String> documentIds) {
+        log.info("[DocumentPublishService] markAsPublished called with documentIds={}", documentIds);
+
         if (documentIds == null || documentIds.isEmpty()) {
+            log.warn("[DocumentPublishService] documentIds is null or empty, skipping update");
             return;
         }
 
         try {
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            if (uuids.isEmpty()) return;
+            log.info("[DocumentPublishService] Parsed {} valid UUIDs from {} documentIds", uuids.size(),
+                    documentIds.size());
 
-            // ANY 구문을 사용하여 안정적인 벌크 업데이트 수행 (PostgreSQL 전용)
+            if (uuids.isEmpty()) {
+                log.warn("[DocumentPublishService] No valid UUIDs after parsing, skipping update");
+                return;
+            }
+
+            // 단일 벌크 업데이트 쿼리로 일괄 처리 (N+1 방지)
+            // 개별 UUID를 반복하지 않고 ANY 연산자로 한 번에 업데이트합니다.
+            // 단일 벌크 업데이트 쿼리 실행
             String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)
                     .setParameter("ids", uuids)
                     .executeUpdate();
 
-            log.info("Stolink DB publication status updated. count={}, ids={}", updatedCount, documentIds);
+            log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
+
+            if (updatedCount == 0) {
+                log.error(
+                        "[DocumentPublishService] WARNING: No documents were updated! Check if documents exist in stolink DB.");
+            }
         } catch (Exception e) {
-            log.error("Failed to update Stolink documents status", e);
+            log.error("[DocumentPublishService] Failed to update Stolink documents status", e);
             throw new RuntimeException("Stolink DB update failed", e);
         }
     }
@@ -57,7 +73,8 @@ public class DocumentPublishService {
 
         try {
             List<UUID> uuids = parseAndValidateUuids(documentIds);
-            if (uuids.isEmpty()) return;
+            if (uuids.isEmpty())
+                return;
 
             String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
             int updatedCount = entityManager.createNativeQuery(sql)
@@ -69,6 +86,7 @@ public class DocumentPublishService {
             log.error("Failed to revert Stolink documents status", e);
             throw new RuntimeException("Stolink DB status revert failed", e);
         }
+
     }
 
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
