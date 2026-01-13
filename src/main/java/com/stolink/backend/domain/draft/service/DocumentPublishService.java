@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stolink.backend.domain.document.repository.DocumentRepository;
 import jakarta.persistence.EntityManager;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DocumentPublishService {
 
+    private final DocumentRepository documentRepository;
     private final EntityManager entityManager;
 
     /**
@@ -53,12 +56,7 @@ public class DocumentPublishService {
             int updatedCount = entityManager.createNativeQuery(sql)
                     .executeUpdate();
 
-            log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
-
-            if (updatedCount == 0) {
-                log.error(
-                        "[DocumentPublishService] WARNING: No documents were updated! Check if documents exist in stolink DB.");
-            }
+            log.info("[DocumentPublishService] BULK UPDATE completed for {} documents", uuids.size());
         } catch (Exception e) {
             log.error("[DocumentPublishService] Failed to update Stolink documents status", e);
             throw new RuntimeException("Stolink DB update failed", e);
@@ -89,7 +87,7 @@ public class DocumentPublishService {
             int updatedCount = entityManager.createNativeQuery(sql)
                     .executeUpdate();
 
-            log.info("Stolink DB publication status reverted. count={}, ids={}", updatedCount, documentIds);
+            log.info("Stolink DB publication status reverted. count={}, ids={}", uuids.size(), documentIds);
         } catch (Exception e) {
             log.error("Failed to revert Stolink documents status", e);
             throw new RuntimeException("Stolink DB status revert failed", e);

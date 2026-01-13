@@ -161,6 +161,8 @@ jobs:
           IMAGE_NAME=${AWS_ACCOUNT_ID}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/stolink/storead-spring:${UNIQUE_TAG}
           CORS_ALLOWED_ORIGINS=${CORS_ORIGINS}
           OAUTH2_REDIRECT_URI=https://${STOREAD_CLOUDFRONT_URL}/oauth2/callback
+          OAUTH2_DEFAULT_FAILURE_URL=https://${STOREAD_CLOUDFRONT_URL}/oauth2/callback
+          OAUTH2_ALLOWED_REDIRECT_HOSTS=${CLOUDFRONT_URL}
           GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
           GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
           JWT_SECRET=${JWT_SECRET}
@@ -237,7 +239,7 @@ jobs:
           for i in {1..5}; do
             echo "Health check attempt $i/5..."
             HTTP_CODE=$(curl -s -o /tmp/health_response.txt -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>&1)
-            
+
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✅ Health check passed!"
               cat /tmp/health_response.txt
