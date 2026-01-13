@@ -233,13 +233,13 @@ jobs:
           echo "Waiting for application to start..."
           sleep 60
 
-          HEALTH_URL="https://${{ vars.STOREAD_CLOUDFRONT_URL }}/storead/actuator/health"
+          HEALTH_URL="https://${{ vars.STOREAD_CLOUDFRONT_URL }}/actuator/health"
           echo "Health check URL: $HEALTH_URL"
 
           for i in {1..5}; do
             echo "Health check attempt $i/5..."
             HTTP_CODE=$(curl -s -o /tmp/health_response.txt -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>&1)
-            
+
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✅ Health check passed!"
               cat /tmp/health_response.txt
