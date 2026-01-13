@@ -13,7 +13,13 @@ import java.util.UUID;
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
     // 최상위 댓글만 조회 (parent가 null)
-    Page<Comment> findByChapterIdAndParentIsNullOrderByCreatedAtDesc(UUID chapterId, Pageable pageable);
+    // 최상위 댓글 조회 (relationId가 없는 경우 - 챕터 전체 댓글)
+    Page<Comment> findByChapterIdAndParentIsNullAndRelationIdIsNullOrderByCreatedAtDesc(UUID chapterId,
+            Pageable pageable);
+
+    // 최상위 댓글 조회 (relationId가 있는 경우 - 특정 관계 댓글)
+    Page<Comment> findByChapterIdAndParentIsNullAndRelationIdOrderByCreatedAtDesc(UUID chapterId, String relationId,
+            Pageable pageable);
 
     // 특정 댓글의 답글 조회
     List<Comment> findByParentIdOrderByCreatedAtAsc(UUID parentId);

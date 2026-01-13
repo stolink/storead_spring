@@ -18,6 +18,7 @@ public class CommentResponse {
     private String userAvatarUrl;
     private UUID parentId;
     private String content;
+    private String relationId;
     private Long likeCount;
     private int replyCount;
     private LocalDateTime createdAt;
@@ -32,6 +33,7 @@ public class CommentResponse {
                 .userAvatarUrl(comment.getUser().getAvatarUrl())
                 .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
                 .content(comment.getContent())
+                .relationId(comment.getRelationId())
                 .likeCount(comment.getLikeCount())
                 .replyCount(0)
                 .createdAt(comment.getCreatedAt())
@@ -48,6 +50,7 @@ public class CommentResponse {
                 .userAvatarUrl(comment.getUser().getAvatarUrl())
                 .parentId(comment.getParent() != null ? comment.getParent().getId() : null)
                 .content(comment.getContent())
+                .relationId(comment.getRelationId())
                 .likeCount(comment.getLikeCount())
                 .replyCount(replyCount)
                 .createdAt(comment.getCreatedAt())
