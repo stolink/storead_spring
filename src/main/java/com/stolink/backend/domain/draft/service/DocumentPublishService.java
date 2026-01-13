@@ -42,12 +42,15 @@ public class DocumentPublishService {
                 return;
             }
 
-            // 단일 벌크 업데이트 쿼리로 일괄 처리 (N+1 방지)
-            // 개별 UUID를 반복하지 않고 ANY 연산자로 한 번에 업데이트합니다.
-            // 단일 벌크 업데이트 쿼리 실행
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
+            // IN 절을 사용한 벌크 업데이트 (Hibernate 호환)
+            // UUID 리터럴 리스트를 직접 SQL에 삽입 (Prepared Statement 파라미터 바인딩 이슈 회피)
+            String uuidList = uuids.stream()
+                    .map(uuid -> "'" + uuid.toString() + "'")
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse("");
+
+            String sql = "UPDATE documents SET is_published = true WHERE id IN (" + uuidList + ")";
             int updatedCount = entityManager.createNativeQuery(sql)
-                    .setParameter("ids", uuids)
                     .executeUpdate();
 
             log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
@@ -76,9 +79,14 @@ public class DocumentPublishService {
             if (uuids.isEmpty())
                 return;
 
-            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
+            // IN 절을 사용한 벌크 업데이트 (Hibernate 호환)
+            String uuidList = uuids.stream()
+                    .map(uuid -> "'" + uuid.toString() + "'")
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse("");
+
+            String sql = "UPDATE documents SET is_published = false WHERE id IN (" + uuidList + ")";
             int updatedCount = entityManager.createNativeQuery(sql)
-                    .setParameter("ids", uuids)
                     .executeUpdate();
 
             log.info("Stolink DB publication status reverted. count={}, ids={}", updatedCount, documentIds);
