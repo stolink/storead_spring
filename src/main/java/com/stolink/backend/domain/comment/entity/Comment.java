@@ -35,6 +35,9 @@ public class Comment extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(length = 100)
+    private String relationId; // 관계 ID (link.id)
+
     @Column(nullable = false)
     @Builder.Default
     private Long likeCount = 0L;
