@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.stolink.backend.domain.document.repository.DocumentRepository;
 import jakarta.persistence.EntityManager;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,7 +20,6 @@ import java.util.UUID;
 public class DocumentPublishService {
 
     private final DocumentRepository documentRepository;
-    private final EntityManager entityManager;
 
     /**
      * 지정된 Document들을 게시 완료 상태로 변경
@@ -45,16 +43,8 @@ public class DocumentPublishService {
                 return;
             }
 
-            // IN 절을 사용한 벌크 업데이트 (Hibernate 호환)
-            // UUID 리터럴 리스트를 직접 SQL에 삽입 (Prepared Statement 파라미터 바인딩 이슈 회피)
-            String uuidList = uuids.stream()
-                    .map(uuid -> "'" + uuid.toString() + "'")
-                    .reduce((a, b) -> a + "," + b)
-                    .orElse("");
-
-            String sql = "UPDATE documents SET is_published = true WHERE id IN (" + uuidList + ")";
-            int updatedCount = entityManager.createNativeQuery(sql)
-                    .executeUpdate();
+            // Repository를 통해 안전하게 업데이트 (JPQL 사용, SQL Injection 방지)
+            documentRepository.updatePublishStatus(uuids, true);
 
             log.info("[DocumentPublishService] BULK UPDATE completed for {} documents", uuids.size());
         } catch (Exception e) {
@@ -77,15 +67,8 @@ public class DocumentPublishService {
             if (uuids.isEmpty())
                 return;
 
-            // IN 절을 사용한 벌크 업데이트 (Hibernate 호환)
-            String uuidList = uuids.stream()
-                    .map(uuid -> "'" + uuid.toString() + "'")
-                    .reduce((a, b) -> a + "," + b)
-                    .orElse("");
-
-            String sql = "UPDATE documents SET is_published = false WHERE id IN (" + uuidList + ")";
-            int updatedCount = entityManager.createNativeQuery(sql)
-                    .executeUpdate();
+            // Repository를 통해 안전하게 업데이트
+            documentRepository.updatePublishStatus(uuids, false);
 
             log.info("Stolink DB publication status reverted. count={}, ids={}", uuids.size(), documentIds);
         } catch (Exception e) {
@@ -96,14 +79,16 @@ public class DocumentPublishService {
     }
 
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
-        List<UUID> validUuids = new ArrayList<>();
-        for (String docId : documentIds) {
-            try {
-                validUuids.add(UUID.fromString(docId));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid UUID format: {}", docId);
-            }
-        }
-        return validUuids;
+        return documentIds.stream()
+                .map(docId -> {
+                    try {
+                        return UUID.fromString(docId);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid UUID format: {}", docId);
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

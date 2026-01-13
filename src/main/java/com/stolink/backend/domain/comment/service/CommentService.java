@@ -4,6 +4,7 @@ import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.comment.dto.CommentResponse;
 import com.stolink.backend.domain.comment.dto.CreateCommentRequest;
+import com.stolink.backend.domain.comment.dto.ReplyCountDto;
 import com.stolink.backend.domain.comment.entity.Comment;
 import com.stolink.backend.domain.comment.repository.CommentRepository;
 import com.stolink.backend.domain.user.entity.User;
@@ -47,9 +48,9 @@ public class CommentService {
 
                 java.util.Map<UUID, Long> replyCounts = new java.util.HashMap<>();
                 if (!parentIds.isEmpty()) {
-                        List<Object[]> results = commentRepository.countRepliesByParentIds(parentIds);
-                        for (Object[] result : results) {
-                                replyCounts.put((UUID) result[0], (Long) result[1]);
+                        List<ReplyCountDto> results = commentRepository.countRepliesByParentIds(parentIds);
+                        for (ReplyCountDto result : results) {
+                                replyCounts.put(result.parentId(), result.count());
                         }
                 }
 
@@ -77,8 +78,8 @@ public class CommentService {
                 Comment comment = Comment.builder()
                                 .chapter(chapter)
                                 .user(user)
-                                .content(request.getContent())
-                                .relationId(request.getRelationId())
+                                .content(request.content())
+                                .relationId(request.relationId())
                                 .build();
 
                 Comment saved = commentRepository.save(comment);
@@ -98,7 +99,7 @@ public class CommentService {
                                 .user(user)
                                 .parent(parent)
                                 .relationId(parent.getRelationId())
-                                .content(request.getContent())
+                                .content(request.content())
                                 .build();
 
                 Comment saved = commentRepository.save(reply);
