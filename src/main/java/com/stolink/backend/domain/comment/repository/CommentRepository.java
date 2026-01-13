@@ -12,24 +12,28 @@ import java.util.UUID;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
-    // 최상위 댓글만 조회 (parent가 null)
-    // 최상위 댓글 조회 (relationId가 없는 경우 - 챕터 전체 댓글)
-    Page<Comment> findByChapterIdAndParentIsNullAndRelationIdIsNullOrderByCreatedAtDesc(UUID chapterId,
-            Pageable pageable);
+        // 최상위 댓글만 조회 (parent가 null)
+        // 최상위 댓글 조회 (relationId가 없는 경우 - 챕터 전체 댓글)
+        Page<Comment> findByChapterIdAndParentIsNullAndRelationIdIsNullOrderByCreatedAtDesc(UUID chapterId,
+                        Pageable pageable);
 
-    // 최상위 댓글 조회 (relationId가 있는 경우 - 특정 관계 댓글)
-    Page<Comment> findByChapterIdAndParentIsNullAndRelationIdOrderByCreatedAtDesc(UUID chapterId, String relationId,
-            Pageable pageable);
+        // 최상위 댓글 조회 (relationId가 있는 경우 - 특정 관계 댓글)
+        Page<Comment> findByChapterIdAndParentIsNullAndRelationIdOrderByCreatedAtDesc(UUID chapterId, String relationId,
+                        Pageable pageable);
 
-    // 특정 댓글의 답글 조회
-    List<Comment> findByParentIdOrderByCreatedAtAsc(UUID parentId);
+        // 특정 댓글의 답글 조회
+        List<Comment> findByParentIdOrderByCreatedAtAsc(UUID parentId);
 
-    // 특정 댓글의 답글 수
-    int countByParentId(UUID parentId);
+        // 특정 댓글의 답글 수
+        int countByParentId(UUID parentId);
 
-    // 특정 챕터의 댓글 수
-    int countByChapterId(UUID chapterId);
+        // 특정 댓글들의 답글 수 조회 (N+1 문제 해결)
+        @Query("SELECT c.parent.id, COUNT(c) FROM Comment c WHERE c.parent.id IN :parentIds GROUP BY c.parent.id")
+        List<Object[]> countRepliesByParentIds(@Param("parentIds") List<UUID> parentIds);
 
-    // 특정 댓글의 모든 답글 삭제
-    void deleteByParentId(UUID parentId);
+        // 특정 챕터의 댓글 수
+        int countByChapterId(UUID chapterId);
+
+        // 특정 댓글의 모든 답글 삭제
+        void deleteByParentId(UUID parentId);
 }
