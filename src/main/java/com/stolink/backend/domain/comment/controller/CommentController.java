@@ -27,11 +27,12 @@ public class CommentController {
     @GetMapping("/chapters/{chapterId}/comments")
     public ApiResponse<Map<String, Object>> getComments(
             @PathVariable UUID chapterId,
+            @RequestParam(required = false) String relationId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
-        Page<CommentResponse> comments = commentService.getComments(chapterId, pageable);
+        Page<CommentResponse> comments = commentService.getComments(chapterId, relationId, pageable);
 
         return ApiResponse.ok(Map.of(
                 "comments", comments.getContent(),
@@ -40,9 +41,7 @@ public class CommentController {
                         "size", size,
                         "total", comments.getTotalElements(),
                         "totalPages", comments.getTotalPages(),
-                        "hasNext", comments.hasNext()
-                )
-        ));
+                        "hasNext", comments.hasNext())));
     }
 
     @PostMapping("/chapters/{chapterId}/comments")
