@@ -38,6 +38,19 @@ public class User extends BaseEntity {
     @Column
     private String providerId; // OAuth2 provider's user ID (e.g., Google sub)
 
+    // Notification Settings (stolink과 스키마 동기화)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean goalNotification = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean foreshadowingNotification = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean aiSuggestionNotification = true;
+
     public void updateProfile(String nickname, String avatarUrl) {
         if (nickname != null) {
             this.nickname = nickname;
