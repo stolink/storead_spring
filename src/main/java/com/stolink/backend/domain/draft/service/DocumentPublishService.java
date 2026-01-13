@@ -43,9 +43,8 @@ public class DocumentPublishService {
             }
 
             // 단일 벌크 업데이트 쿼리로 일괄 처리 (N+1 방지)
-            // 개별 UUID를 반복하지 않고 ANY 연산자로 한 번에 업데이트합니다.
-            // 단일 벌크 업데이트 쿼리 실행
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
+            // IN 절을 사용하여 JPA가 자동으로 List<UUID>를 처리하도록 합니다.
+            String sql = "UPDATE documents SET is_published = true WHERE id IN (:ids)";
             int updatedCount = entityManager.createNativeQuery(sql)
                     .setParameter("ids", uuids)
                     .executeUpdate();
@@ -76,7 +75,7 @@ public class DocumentPublishService {
             if (uuids.isEmpty())
                 return;
 
-            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
+            String sql = "UPDATE documents SET is_published = false WHERE id IN (:ids)";
             int updatedCount = entityManager.createNativeQuery(sql)
                     .setParameter("ids", uuids)
                     .executeUpdate();
