@@ -5,7 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
+import com.stolink.backend.domain.document.repository.DocumentRepository;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DocumentPublishService {
 
-    private final EntityManager entityManager;
+    private final DocumentRepository documentRepository;
 
     /**
      * 지정된 Document들을 게시 완료 상태로 변경
@@ -42,20 +43,10 @@ public class DocumentPublishService {
                 return;
             }
 
-            // 단일 벌크 업데이트 쿼리로 일괄 처리 (N+1 방지)
-            // 개별 UUID를 반복하지 않고 ANY 연산자로 한 번에 업데이트합니다.
-            // 단일 벌크 업데이트 쿼리 실행
-            String sql = "UPDATE documents SET is_published = true WHERE id = ANY(CAST(:ids AS uuid[]))";
-            int updatedCount = entityManager.createNativeQuery(sql)
-                    .setParameter("ids", uuids)
-                    .executeUpdate();
+            // Repository를 통해 안전하게 업데이트 (JPQL 사용)
+            documentRepository.updatePublishStatus(uuids, true);
 
-            log.info("[DocumentPublishService] BULK UPDATE result: affected={}", updatedCount);
-
-            if (updatedCount == 0) {
-                log.error(
-                        "[DocumentPublishService] WARNING: No documents were updated! Check if documents exist in stolink DB.");
-            }
+            log.info("[DocumentPublishService] BULK UPDATE completed for {} documents", uuids.size());
         } catch (Exception e) {
             log.error("[DocumentPublishService] Failed to update Stolink documents status", e);
             throw new RuntimeException("Stolink DB update failed", e);
@@ -76,12 +67,9 @@ public class DocumentPublishService {
             if (uuids.isEmpty())
                 return;
 
-            String sql = "UPDATE documents SET is_published = false WHERE id = ANY(CAST(:ids AS uuid[]))";
-            int updatedCount = entityManager.createNativeQuery(sql)
-                    .setParameter("ids", uuids)
-                    .executeUpdate();
+            documentRepository.updatePublishStatus(uuids, false);
 
-            log.info("Stolink DB publication status reverted. count={}, ids={}", updatedCount, documentIds);
+            log.info("Stolink DB publication status reverted. count={}, ids={}", uuids.size(), documentIds);
         } catch (Exception e) {
             log.error("Failed to revert Stolink documents status", e);
             throw new RuntimeException("Stolink DB status revert failed", e);
