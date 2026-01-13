@@ -39,8 +39,22 @@ public class CommentService {
                                         .findByChapterIdAndParentIsNullAndRelationIdIsNullOrderByCreatedAtDesc(
                                                         chapterId, pageable);
                 }
+
+                // N+1 문제 해결을 위한 벌크 카운트 쿼리
+                List<UUID> parentIds = comments.getContent().stream()
+                                .map(Comment::getId)
+                                .collect(Collectors.toList());
+
+                java.util.Map<UUID, Long> replyCounts = new java.util.HashMap<>();
+                if (!parentIds.isEmpty()) {
+                        List<Object[]> results = commentRepository.countRepliesByParentIds(parentIds);
+                        for (Object[] result : results) {
+                                replyCounts.put((UUID) result[0], (Long) result[1]);
+                        }
+                }
+
                 return comments.map(comment -> {
-                        int replyCount = commentRepository.countByParentId(comment.getId());
+                        int replyCount = replyCounts.getOrDefault(comment.getId(), 0L).intValue();
                         return CommentResponse.from(comment, replyCount);
                 });
         }
@@ -83,6 +97,7 @@ public class CommentService {
                                 .chapter(parent.getChapter())
                                 .user(user)
                                 .parent(parent)
+                                .relationId(parent.getRelationId())
                                 .content(request.getContent())
                                 .build();
 
