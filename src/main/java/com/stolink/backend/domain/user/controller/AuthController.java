@@ -21,15 +21,9 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+    private final CookieUtils cookieUtils;
 
-    @Value("${jwt.cookie-domain}")
-    private String cookieDomain;
 
-    @Value("${jwt.cookie-secure:true}")
-    private boolean cookieSecure;
-
-    @Value("${jwt.access-token-expiry:1800000}")
-    private long accessTokenExpiry;
 
     /**
      * 일반 회원가입
@@ -39,8 +33,8 @@ public class AuthController {
         TokenResponse token = authService.register(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, createAccessTokenCookie(token.getAccessToken()).toString())
-                .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(token.getRefreshToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(token.getAccessToken()).toString())
+                .header(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(token.getRefreshToken()).toString())
                 .body(ApiResponse.created(AuthResponse.from(token)));
     }
 
@@ -51,9 +45,19 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody LoginRequest request) {
         TokenResponse token = authService.login(request);
 
+        ResponseCookie accessCookie = cookieUtils.createAccessTokenCookie(token.getAccessToken());
+        ResponseCookie refreshCookie = cookieUtils.createRefreshTokenCookie(token.getRefreshToken());
+
+        System.out.println("=== Login Debug ===");
+        System.out.println("Access Cookie: " + accessCookie.toString());
+        System.out.println("Refresh Cookie: " + refreshCookie.toString());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, createAccessTokenCookie(token.getAccessToken()).toString())
-                .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(token.getRefreshToken()).toString())
+                .headers(consumer -> consumer.addAll(headers))
                 .body(ApiResponse.ok(AuthResponse.from(token)));
     }
 
@@ -61,21 +65,34 @@ public class AuthController {
      * 토큰 갱신 (Cookie 사용)
      */
     @PostMapping("/refresh")
+
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
-        if (refreshToken == null) {
-            throw new IllegalArgumentException("Refresh Token이 쿠키에 없습니다.");
+        System.out.println("=== Refresh Debug ===");
+        System.out.println("Incoming Refresh Token: " + refreshToken);
+        
+        try {
+            if (refreshToken == null) {
+                System.out.println("Refresh Token is null in cookie");
+                throw new IllegalArgumentException("Refresh Token이 쿠키에 없습니다.");
+            }
+
+            RefreshTokenRequest request = new RefreshTokenRequest();
+            request.setRefreshToken(refreshToken);
+
+            System.out.println("Calling authService.refreshToken");
+            TokenResponse token = authService.refreshToken(request);
+            System.out.println("Token refreshed successfully");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(token.getAccessToken()).toString())
+                    .header(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(token.getRefreshToken()).toString())
+                    .body(ApiResponse.ok(AuthResponse.from(token)));
+        } catch (Exception e) {
+            System.err.println("Exception in refresh:");
+            e.printStackTrace();
+            throw e;
         }
-
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(refreshToken);
-
-        TokenResponse token = authService.refreshToken(request);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, createAccessTokenCookie(token.getAccessToken()).toString())
-                .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(token.getRefreshToken()).toString())
-                .body(ApiResponse.ok(AuthResponse.from(token)));
     }
 
     /**
@@ -88,8 +105,8 @@ public class AuthController {
             authService.logout(refreshToken);
         }
 
-        ResponseCookie accessCookie = CookieUtils.deleteCookie("access_token", cookieDomain, cookieSecure);
-        ResponseCookie refreshCookie = CookieUtils.deleteCookie("refresh_token", cookieDomain, cookieSecure);
+        ResponseCookie accessCookie = cookieUtils.createExpiredAccessTokenCookie();
+        ResponseCookie refreshCookie = cookieUtils.createExpiredRefreshTokenCookie();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
@@ -104,8 +121,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logoutAll(@AuthenticationPrincipal UUID userId) {
         authService.logoutAll(userId);
 
-        ResponseCookie accessCookie = CookieUtils.deleteCookie("access_token", cookieDomain, cookieSecure);
-        ResponseCookie refreshCookie = CookieUtils.deleteCookie("refresh_token", cookieDomain, cookieSecure);
+        ResponseCookie accessCookie = cookieUtils.createExpiredAccessTokenCookie();
+        ResponseCookie refreshCookie = cookieUtils.createExpiredRefreshTokenCookie();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
@@ -134,23 +151,5 @@ public class AuthController {
         return ApiResponse.ok(user);
     }
 
-    private ResponseCookie createAccessTokenCookie(String accessToken) {
-        return CookieUtils.createCookie(
-                "access_token",
-                accessToken,
-                cookieDomain,
-                cookieSecure,
-                accessTokenExpiry / 1000 // ms -> seconds
-        );
-    }
 
-    private ResponseCookie createRefreshTokenCookie(String refreshToken) {
-        return CookieUtils.createCookie(
-                "refresh_token",
-                refreshToken,
-                cookieDomain,
-                cookieSecure,
-                7 * 24 * 60 * 60 // 7 days
-        );
-    }
 }
