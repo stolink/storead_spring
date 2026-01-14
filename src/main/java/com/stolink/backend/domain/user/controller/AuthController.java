@@ -5,7 +5,7 @@ import com.stolink.backend.domain.user.service.AuthService;
 import com.stolink.backend.global.common.dto.ApiResponse;
 import com.stolink.backend.global.util.CookieUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -18,6 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
@@ -48,9 +49,9 @@ public class AuthController {
         ResponseCookie accessCookie = cookieUtils.createAccessTokenCookie(token.getAccessToken());
         ResponseCookie refreshCookie = cookieUtils.createRefreshTokenCookie(token.getRefreshToken());
 
-        System.out.println("=== Login Debug ===");
-        System.out.println("Access Cookie: " + accessCookie.toString());
-        System.out.println("Refresh Cookie: " + refreshCookie.toString());
+        log.debug("=== Login Success ===");
+        log.debug("Access Token Cookie created");
+        log.debug("Refresh Token Cookie created");
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
@@ -68,29 +69,27 @@ public class AuthController {
 
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
-        System.out.println("=== Refresh Debug ===");
-        System.out.println("Incoming Refresh Token: " + refreshToken);
+        log.debug("=== Refresh Token Request ===");
         
         try {
             if (refreshToken == null) {
-                System.out.println("Refresh Token is null in cookie");
+                log.warn("Refresh Token is missing in cookie");
                 throw new IllegalArgumentException("Refresh Token이 쿠키에 없습니다.");
             }
 
             RefreshTokenRequest request = new RefreshTokenRequest();
             request.setRefreshToken(refreshToken);
 
-            System.out.println("Calling authService.refreshToken");
+            log.debug("Calling authService.refreshToken");
             TokenResponse token = authService.refreshToken(request);
-            System.out.println("Token refreshed successfully");
+            log.info("Token refreshed successfully");
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(token.getAccessToken()).toString())
                     .header(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(token.getRefreshToken()).toString())
                     .body(ApiResponse.ok(AuthResponse.from(token)));
         } catch (Exception e) {
-            System.err.println("Exception in refresh:");
-            e.printStackTrace();
+            log.error("Exception in refresh token process: ", e);
             throw e;
         }
     }
