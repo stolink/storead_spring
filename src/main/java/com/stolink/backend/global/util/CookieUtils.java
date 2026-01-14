@@ -26,6 +26,9 @@ public class CookieUtils {
     @Value("${jwt.refresh-token-expiry:604800000}")
     private long refreshTokenExpiry;
 
+    @Value("${jwt.cookie-same-site:Lax}")
+    private String cookieSameSite;
+
     /**
      * Access Token 쿠키 생성
      * Path: / (모든 경로에서 전송)
@@ -36,7 +39,7 @@ public class CookieUtils {
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(accessTokenExpiry / 1000)
-                .sameSite("Lax");
+                .sameSite(cookieSameSite);
 
         if (cookieDomain != null && !cookieDomain.equals("localhost")) {
             builder.domain(cookieDomain);
@@ -55,7 +58,7 @@ public class CookieUtils {
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(refreshTokenExpiry / 1000)
-                .sameSite("Lax");
+                .sameSite(cookieSameSite);
 
         if (cookieDomain != null && !cookieDomain.equals("localhost")) {
             builder.domain(cookieDomain);
@@ -84,7 +87,7 @@ public class CookieUtils {
                 .secure(cookieSecure)
                 .path(path)
                 .maxAge(0)
-                .sameSite("Lax");
+                .sameSite(cookieSameSite);
 
         if (cookieDomain != null && !cookieDomain.equals("localhost")) {
             builder.domain(cookieDomain);
