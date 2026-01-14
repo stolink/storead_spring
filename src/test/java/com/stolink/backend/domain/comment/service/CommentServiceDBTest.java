@@ -52,11 +52,13 @@ public class CommentServiceDBTest {
         UUID parentId = parent.getId();
 
         // 3. Action: Create Reply via Service
-        CreateCommentRequest request = new CreateCommentRequest();
-        request.setContent("Reply Content");
+        // Record는 생성자에서 모든 필드를 받음 (content, relationId)
+        // Reply는 부모의 relationId를 상속받으므로 null로 전달하거나 "test-relation" 전달
+        CreateCommentRequest request = new CreateCommentRequest("Reply Content", null);
 
         CommentResponse response = commentService.createReply(user.getId(), parentId, request);
-        UUID replyId = response.getId();
+        // Record는 getter 대신 필드명() 메서드 사용
+        UUID replyId = response.id();
 
         // 4. Verification: Check the database directly (via Repository)
         Comment savedReply = commentRepository.findById(replyId).orElseThrow();
