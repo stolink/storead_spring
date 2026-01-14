@@ -66,20 +66,28 @@ public class DiscoveryController {
                 log.info("Discovery API: getWorks requested. genres={}, status={}, page={}, size={}, sort={}, order={}",
                                 genres, status, page, size, sort, order);
 
-                Sort.Direction direction = order.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-                String sortProperty = sort;
+                Sort.Direction direction = "asc".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+                String sortProperty;
 
                 // 정렬 필드 매핑
-                // - latest: 생성일 기준 (최신순)
-                // - popular: 좋아요 수 기준
-                // - rating: 평균 별점 기준 (ratingSum 대신 averageRating 사용하여 정확한 평점 정렬)
-                if ("latest".equalsIgnoreCase(sort)) {
+                if (sort == null) {
+                    sortProperty = "createdAt";
+                } else {
+                    String cleanSort = sort.trim().toLowerCase();
+                    if ("latest".equals(cleanSort)) {
                         sortProperty = "createdAt";
-                } else if ("popular".equalsIgnoreCase(sort)) {
+                    } else if ("popular".equals(cleanSort)) {
                         sortProperty = "likeCount";
-                } else if ("rating".equalsIgnoreCase(sort)) {
+                    } else if ("rating".equals(cleanSort)) {
                         sortProperty = "averageRating";
+                    } else {
+                        // 허용되지 않은 정렬 값은 기본값(createdAt)으로 처리하여 예외 방지
+                        log.warn("Invalid sort property received: {}. Defaulting to createdAt.", sort);
+                        sortProperty = "createdAt";
+                    }
                 }
+
+                log.info("Mapped sort property: '{}' -> '{}'", sort, sortProperty);
 
                 Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, sortProperty));
 
