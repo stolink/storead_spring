@@ -9,6 +9,7 @@ import com.stolink.backend.domain.comment.repository.CommentRepository;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -18,8 +19,15 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * CommentService DB 통합 테스트
+ * 
+ * 이 테스트는 실제 PostgreSQL 연결이 필요하므로 로컬 환경에서만 실행됩니다.
+ * CI 환경(GitHub Actions)에서는 자동으로 건너뜁니다.
+ */
 @SpringBootTest
 @ActiveProfiles("local")
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true", disabledReason = "CI 환경에서는 PostgreSQL이 없으므로 건너뜀")
 public class CommentServiceDBTest {
 
     @Autowired
