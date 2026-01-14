@@ -82,9 +82,16 @@ public class AuthService {
         String refreshTokenStr = request.getRefreshToken();
 
         // 1. RDB에서 Refresh Token 조회
-        log.debug("Attempting to refresh token: {}", refreshTokenStr);
+        String tokenPreview = refreshTokenStr.length() > 10 
+                ? refreshTokenStr.substring(0, 10) + "..." 
+                : refreshTokenStr;
+        log.debug("Attempting to refresh token: {}", tokenPreview);
+        
         RefreshToken storedToken = refreshTokenRepository.findByToken(refreshTokenStr)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 refresh token입니다."));
+                .orElseThrow(() -> {
+                    log.warn("Refresh token not found in DB (possibly already rotated): {}", tokenPreview);
+                    return new IllegalArgumentException("유효하지 않은 refresh token입니다. (DB에 존재하지 않음 - Token Rotation 경합 가능성)");
+                });
 
         // 2. 만료 여부 확인
         if (storedToken.isExpired()) {
