@@ -89,8 +89,19 @@ public class AuthController {
                     .header(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(token.getRefreshToken()).toString())
                     .body(ApiResponse.ok(AuthResponse.from(token)));
         } catch (Exception e) {
-            log.error("Exception in refresh token process: ", e);
-            throw e;
+            log.error("Exception in refresh token process: {}", e.getMessage());
+            
+            // 쿠키 삭제 (유효하지 않은 토큰이므로 브라우저에서 제거)
+            ResponseCookie accessCookie = cookieUtils.createExpiredAccessTokenCookie();
+            ResponseCookie refreshCookie = cookieUtils.createExpiredRefreshTokenCookie();
+
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                    .body(ApiResponse.<AuthResponse>builder()
+                            .status(HttpStatus.UNAUTHORIZED)
+                            .message("Refresh Token 검증 실패: " + e.getMessage())
+                            .build());
         }
     }
 
