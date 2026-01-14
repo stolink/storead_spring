@@ -74,7 +74,7 @@ public class DiscoveryController {
                     sortProperty = "createdAt";
                 } else {
                     String cleanSort = sort.trim().toLowerCase();
-                    if ("latest".equals(cleanSort)) {
+                    if ("latest".equals(cleanSort) || "createdat".equals(cleanSort)) {
                         sortProperty = "createdAt";
                     } else if ("popular".equals(cleanSort)) {
                         sortProperty = "likeCount";
