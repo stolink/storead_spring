@@ -1,6 +1,6 @@
 package com.stolink.backend.global.security.jwt;
 
-import com.stolink.backend.global.util.CookieUtils;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
