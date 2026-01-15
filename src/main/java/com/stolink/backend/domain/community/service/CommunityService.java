@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,14 +45,9 @@ public class CommunityService {
         // 1. Draft 조회 (만료 및 소유권 체크 포함)
         Draft draft = draftService.findEntityById(request.getDraftId(), userId);
 
-        // 2. Work 조회 또는 생성
+        // 2. Work 조회 또는 생성 (동시성 제어 포함)
         AtomicBoolean workCreated = new AtomicBoolean(false);
-        Work work = workRepository.findByProjectId(draft.getProjectId())
-                .orElseGet(() -> {
-                    workCreated.set(true);
-                    Work newWork = createWork(draft, userId);
-                    return workRepository.saveAndFlush(newWork); // 즉시 저장
-                });
+        Work work = getOrCreateWork(draft, userId, workCreated);
 
         // 3. 중복 게시 체크 (일괄 쿼리로 N+1 방지)
         List<String> allDocumentIds = draft.getAllDocumentIds();
@@ -59,16 +55,13 @@ public class CommunityService {
 
         List<String> duplicates = duplicationChecker.findDuplicates(work.getId(), allDocumentIds);
         if (!duplicates.isEmpty()) {
-            log.warn("[CommunityService] Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(),
-                    duplicates);
             throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
                     "이미 게시된 챕터가 있습니다: " + String.join(", ", duplicates));
         }
 
-        // 4. Chapter 생성 및 저장
+        // 4. Chapter 생성 및 저장 (saveAndFlush 제거 - 트랜잭션 종료 시 반영)
         Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle());
-        chapter = chapterRepository.saveAndFlush(chapter); // 즉시 저장 및 영속화 확인
-        log.info("[CommunityService] Chapter saved successfully. ID: {}, WorkID: {}", chapter.getId(), work.getId());
+        chapterRepository.save(chapter);
 
         // 5. Document 게시 상태 업데이트 (Stolink DB)
         documentPublishService.markAsPublished(draft.getAllDocumentIds());
@@ -76,7 +69,7 @@ public class CommunityService {
         // 6. Draft 삭제 (소유권 체크 포함)
         draftService.deleteById(request.getDraftId(), userId);
 
-        log.info("[CommunityService] Community publish completed. workId={}, chapterId={}",
+        log.info("[CommunityService] Community publish completed successfully. workId={}, chapterId={}",
                 work.getId(), chapter.getId());
 
         return CommunityPublishResponse.builder()
@@ -84,6 +77,28 @@ public class CommunityService {
                 .chapterId(chapter.getId())
                 .workCreated(workCreated.get())
                 .build();
+    }
+
+    /**
+     * 작품 조회 또는 생성 (동시성 요청에 의한 중복 생성 방지)
+     */
+    private Work getOrCreateWork(Draft draft, UUID userId, AtomicBoolean workCreated) {
+        return workRepository.findByProjectId(draft.getProjectId())
+                .orElseGet(() -> {
+                    try {
+                        workCreated.set(true);
+                        Work newWork = createWork(draft, userId);
+                        return workRepository.save(newWork);
+                    } catch (DataIntegrityViolationException e) {
+                        // 동시에 여러 요청이 올 경우 Unique 제약 조건 위반 발생 가능 -> 재조회
+                        log.info(
+                                "[CommunityService] Race condition detected during Work creation. Re-fetching existing work.");
+                        workCreated.set(false);
+                        return workRepository.findByProjectId(draft.getProjectId())
+                                .orElseThrow(() -> new RuntimeException(
+                                        "Work creation failed due to race condition, but still not found.", e));
+                    }
+                });
     }
 
     private Work createWork(Draft draft, UUID userId) {
