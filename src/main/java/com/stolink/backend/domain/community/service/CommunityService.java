@@ -39,7 +39,7 @@ public class CommunityService {
      * Draft 기반으로 Work(없으면 생성) + Chapter 생성
      */
     public CommunityPublishResponse publish(CommunityPublishRequest request, UUID userId) {
-        log.info("Starting community publish process: request={}, userId={}", request, userId);
+        log.info("[CommunityService] Starting publish process: draftId={}, userId={}", request.getDraftId(), userId);
 
         // 1. Draft 조회 (만료 및 소유권 체크 포함)
         Draft draft = draftService.findEntityById(request.getDraftId(), userId);
@@ -49,23 +49,26 @@ public class CommunityService {
         Work work = workRepository.findByProjectId(draft.getProjectId())
                 .orElseGet(() -> {
                     workCreated.set(true);
-                    return createWork(draft, userId);
+                    Work newWork = createWork(draft, userId);
+                    return workRepository.saveAndFlush(newWork); // 즉시 저장
                 });
 
         // 3. 중복 게시 체크 (일괄 쿼리로 N+1 방지)
         List<String> allDocumentIds = draft.getAllDocumentIds();
-        log.info("Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
+        log.info("[CommunityService] Checking duplication for workId={}, documentIds={}", work.getId(), allDocumentIds);
 
         List<String> duplicates = duplicationChecker.findDuplicates(work.getId(), allDocumentIds);
         if (!duplicates.isEmpty()) {
-            log.warn("Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(), duplicates);
+            log.warn("[CommunityService] Duplicate chapters detected: workId={}, duplicateDocIds={}", work.getId(),
+                    duplicates);
             throw new com.stolink.backend.domain.community.exception.DuplicateChapterException(
                     "이미 게시된 챕터가 있습니다: " + String.join(", ", duplicates));
         }
-        log.info("Duplication check passed for documentIds={}", allDocumentIds);
 
-        // 4. Chapter 생성
+        // 4. Chapter 생성 및 저장
         Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle());
+        chapter = chapterRepository.saveAndFlush(chapter); // 즉시 저장 및 영속화 확인
+        log.info("[CommunityService] Chapter saved successfully. ID: {}, WorkID: {}", chapter.getId(), work.getId());
 
         // 5. Document 게시 상태 업데이트 (Stolink DB)
         documentPublishService.markAsPublished(draft.getAllDocumentIds());
@@ -73,8 +76,8 @@ public class CommunityService {
         // 6. Draft 삭제 (소유권 체크 포함)
         draftService.deleteById(request.getDraftId(), userId);
 
-        log.info("Community publish completed: workId={}, chapterId={}, documentIds={}",
-                work.getId(), chapter.getId(), draft.getAllDocumentIds());
+        log.info("[CommunityService] Community publish completed. workId={}, chapterId={}",
+                work.getId(), chapter.getId());
 
         return CommunityPublishResponse.builder()
                 .workId(work.getId())
@@ -99,8 +102,8 @@ public class CommunityService {
                 .projectId(draft.getProjectId())
                 .build();
 
-        log.info("Created new work: projectId={}, title={}, authorId={}", draft.getProjectId(), title, userId);
-        return workRepository.save(work);
+        log.info("[CommunityService] Created new work object: projectId={}, title={}", draft.getProjectId(), title);
+        return work;
     }
 
     private Chapter createChapter(Work work, Draft draft, Integer requestedChapterNumber, String overrideTitle) {
@@ -127,8 +130,8 @@ public class CommunityService {
         if (Boolean.TRUE.equals(draft.getIsMerged())) {
             // 시나리오 C: 병합 배포 → documentIds 배열에 저장
             builder.documentIds(draft.getAllDocumentIds());
-            log.info("Created merged chapter: workId={}, chapterNumber={}, title={}, documentIds={}",
-                    work.getId(), chapterNumber, chapterTitle, draft.getAllDocumentIds());
+            log.info("[CommunityService] Preparing merged chapter: chapterNumber={}, title={}, documentIds={}",
+                    chapterNumber, chapterTitle, draft.getAllDocumentIds());
         } else {
             // 시나리오 A, B: 단일/각각 배포 → documentId에 저장
             String docId = draft.getDocumentId();
@@ -136,11 +139,10 @@ public class CommunityService {
                 docId = draft.getAllDocumentIds().get(0);
             }
             builder.documentId(docId);
-            log.info("Created single chapter: workId={}, chapterNumber={}, title={}, documentId={}",
-                    work.getId(), chapterNumber, chapterTitle, docId);
+            log.info("[CommunityService] Preparing single chapter: chapterNumber={}, title={}, documentId={}",
+                    chapterNumber, chapterTitle, docId);
         }
 
-        Chapter chapter = builder.build();
-        return chapterRepository.save(chapter);
+        return builder.build();
     }
 }
