@@ -54,6 +54,7 @@ public class WorkService {
                 .coverImageUrl(request.getCoverImageUrl())
                 .genre(request.getGenre())
                 .status(request.getStatus() != null ? request.getStatus() : WorkStatus.ONGOING)
+                .projectId(request.getProjectId()) // stolink 프로젝트 연동
                 .build();
 
         Work saved = workRepository.save(work);
@@ -70,8 +71,7 @@ public class WorkService {
                 request.getSynopsis(),
                 request.getCoverImageUrl(),
                 request.getGenre(),
-                request.getStatus()
-        );
+                request.getStatus());
 
         int chapterCount = chapterRepository.countByWorkId(workId);
         return WorkResponse.from(work, chapterCount);
