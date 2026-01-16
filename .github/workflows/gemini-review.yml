@@ -105,26 +105,37 @@ jobs:
           import os
 
           # diff 내용 읽기 (안전한 방식)
-          with open('diff_content.txt', 'r', encoding='utf-8', errors='replace') as f:
-              diff_content = f.read()
+          try:
+              with open('diff_content.txt', 'r', encoding='utf-8', errors='replace') as f:
+                  diff_content = f.read()
+          except FileNotFoundError:
+              with open('review_result.txt', 'w') as f:
+                  f.write("diff_content.txt 파일을 찾을 수 없습니다.")
+              sys.exit(1)
 
           files = """${{ steps.diff.outputs.files }}"""
           diff_stat = "${{ steps.diff.outputs.diff_stat }}"
           diff_lines = "${{ steps.diff.outputs.diff_lines }}"
-
           files_count = "${{ steps.diff.outputs.files_count }}"
 
           # 제한 사항 경고 메시지 생성
           truncated_notice = ""
           notices = []
-          if int(diff_lines) > 10000:
-              notices.append(f"diff 라인 수가 {diff_lines}줄로 10,000줄을 초과하여 일부만 리뷰합니다.")
-          if int(files_count) > 30:
-              notices.append(f"변경된 파일이 {files_count}개로 30개를 초과하여 일부만 표시합니다.")
+          try:
+              if int(diff_lines) > 10000:
+                  notices.append(f"diff 라인 수가 {diff_lines}줄로 10,000줄을 초과하여 일부만 리뷰합니다.")
+              if int(files_count) > 30:
+                  notices.append(f"변경된 파일이 {files_count}개로 30개를 초과하여 일부만 표시합니다.")
+          except ValueError:
+              pass # 정수 변환 실패 시 무시
+
           if notices:
               truncated_notice = "\n\n**Note:** " + " ".join(notices)
 
-          prompt = f"""당신은 StoRead Backend 프로젝트(Java 21/Spring Boot 3.4.1)의 시니어 백엔드 개발자이자 DBA 전문가입니다.
+          # 프롬프트 구성 (들여쓰기 주의)
+          prompt_intro = "당신은 StoRead Backend 프로젝트(Java 21/Spring Boot 3.4.1)의 시니어 백엔드 개발자이자 DBA 전문가입니다."
+          
+          prompt = f"""{prompt_intro}
 
           ## 프로젝트 컨텍스트
           - Spring Boot 3.4.1 기반 REST API 서버
@@ -181,7 +192,12 @@ jobs:
 
           # Gemini API 호출
           api_key = os.environ.get('GEMINI_API_KEY')
-          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+          if not api_key:
+              with open('review_result.txt', 'w') as f:
+                  f.write("API Key가 설정되지 않았습니다.")
+              sys.exit(1)
+
+          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
 
           payload = {
               "contents": [{"parts": [{"text": prompt}]}],
