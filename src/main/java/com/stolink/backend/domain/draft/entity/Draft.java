@@ -80,6 +80,10 @@ public class Draft {
         return LocalDateTime.now().isAfter(expiresAt);
     }
 
+    public void updatePublishStatus(PublishStatus status) {
+        this.publishStatus = status;
+    }
+
     /**
      * 호환성 레이어: documentIds 조회 시 기존 documentId도 포함하여 반환
      */

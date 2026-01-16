@@ -45,6 +45,9 @@ public class CommunityService {
     public CommunityPublishResponse publish(CommunityPublishRequest request, UUID userId) {
         log.info("[DEBUG][STEP 0] Starting publish process: draftId={}, userId={}", request.getDraftId(), userId);
 
+        // 0. 게시 상태 변경 (추적 용이성 확보 - 별도 트랜잭션)
+        draftService.updatePublishStatus(request.getDraftId(), userId, Draft.PublishStatus.PUBLISHING);
+
         // 1. Draft 조회 (만료 및 소유권 체크 포함)
         Draft draft = draftService.findEntityById(request.getDraftId(), userId);
         log.info("[DEBUG][STEP 1] Draft found: projectId={}", draft.getProjectId());

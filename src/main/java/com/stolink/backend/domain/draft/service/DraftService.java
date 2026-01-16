@@ -8,6 +8,7 @@ import com.stolink.backend.global.common.exception.AccessDeniedException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -53,6 +54,15 @@ public class DraftService {
         validateOwnership(draft, userId);
 
         draftRepository.delete(draft);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updatePublishStatus(UUID id, UUID userId, Draft.PublishStatus status) {
+        Draft draft = draftRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Draft", "id", id));
+        validateOwnership(draft, userId);
+        draft.updatePublishStatus(status);
+        draftRepository.save(draft);
     }
 
     private void validateOwnership(Draft draft, UUID userId) {
