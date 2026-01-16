@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stolink.backend.domain.document.repository.DocumentRepository;
+import jakarta.persistence.EntityManager;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +43,7 @@ public class DocumentPublishService {
                 return;
             }
 
-            // Repository를 통해 안전하게 업데이트 (JPQL 사용)
+            // Repository를 통해 안전하게 업데이트 (JPQL 사용, SQL Injection 방지)
             documentRepository.updatePublishStatus(uuids, true);
 
             log.info("[DocumentPublishService] BULK UPDATE completed for {} documents", uuids.size());
@@ -67,6 +67,7 @@ public class DocumentPublishService {
             if (uuids.isEmpty())
                 return;
 
+            // Repository를 통해 안전하게 업데이트
             documentRepository.updatePublishStatus(uuids, false);
 
             log.info("Stolink DB publication status reverted. count={}, ids={}", uuids.size(), documentIds);
@@ -78,14 +79,16 @@ public class DocumentPublishService {
     }
 
     private List<UUID> parseAndValidateUuids(List<String> documentIds) {
-        List<UUID> validUuids = new ArrayList<>();
-        for (String docId : documentIds) {
-            try {
-                validUuids.add(UUID.fromString(docId));
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid UUID format: {}", docId);
-            }
-        }
-        return validUuids;
+        return documentIds.stream()
+                .map(docId -> {
+                    try {
+                        return UUID.fromString(docId);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid UUID format: {}", docId);
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

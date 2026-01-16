@@ -27,6 +27,7 @@ jwt:
   refresh-token-expiry: 604800000 # 7일 (ms)
   cookie-domain: ${JWT_COOKIE_DOMAIN:localhost}
   cookie-secure: false # 로컬에서는 HTTP 사용
+  cookie-same-site: Lax # 로컬 환경에서는 Lax 사용
 
 # OAuth2 Redirect URI
 oauth2:

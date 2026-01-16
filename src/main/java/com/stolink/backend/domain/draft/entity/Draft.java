@@ -1,10 +1,9 @@
 package com.stolink.backend.domain.draft.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Immutable;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,16 +12,14 @@ import java.util.UUID;
 
 /**
  * Draft 엔티티 - stolink에서 생성한 drafts 테이블과 매핑
- * storead에서는 조회/삭제 기능만 사용
- * 
- * @Immutable: 이 엔티티는 읽기/삭제 전용.
- *             Hibernate가 UPDATE 쿼리를 생성하지 않으며, DDL 변경 위험을 최소화.
+ * storead에서는 조회/삭제 및 상태 업데이트 기능 사용
  */
 @Entity
 @Table(name = "drafts")
-@Immutable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class Draft {
 
     @Id
@@ -36,8 +33,8 @@ public class Draft {
     private String documentId;
 
     // 다중 Document ID 배열 (신규 Bulk 배포용)
-    @Type(JsonType.class)
-    @Column(name = "document_ids", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "document_ids")
     private List<String> documentIds;
 
     // 병합 배포 여부
@@ -52,8 +49,8 @@ public class Draft {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    @Type(JsonType.class)
-    @Column(name = "graph_snapshot", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "graph_snapshot")
     private Map<String, Object> graphSnapshot;
 
     @Column(name = "created_at", nullable = false)
@@ -75,11 +72,16 @@ public class Draft {
     @Column(name = "work_cover_url")
     private String workCoverUrl;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "publish_status")
-    private String publishStatus;
+    private PublishStatus publishStatus;
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
+    }
+
+    public void updatePublishStatus(PublishStatus status) {
+        this.publishStatus = status;
     }
 
     /**
@@ -90,5 +92,12 @@ public class Draft {
             return documentIds;
         }
         return documentId != null ? List.of(documentId) : List.of();
+    }
+
+    public enum PublishStatus {
+        DRAFT,
+        PUBLISHING,
+        PUBLISHED,
+        FAILED
     }
 }

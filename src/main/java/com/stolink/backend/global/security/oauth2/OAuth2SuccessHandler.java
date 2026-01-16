@@ -31,15 +31,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         private final JwtTokenProvider jwtTokenProvider;
         private final AuthService authService;
+        private final CookieUtils cookieUtils;
 
         @Value("${oauth2.redirect-uri:http://localhost:5174/oauth2/callback}")
         private String redirectUri;
 
-        @Value("${jwt.cookie-domain}")
-        private String cookieDomain;
 
-        @Value("${jwt.cookie-secure:true}")
-        private boolean cookieSecure;
 
         @Override
         public void onAuthenticationSuccess(HttpServletRequest request,
@@ -61,22 +58,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 authService.saveRefreshToken(userId, refreshToken);
 
                 // Access Token을 HttpOnly 쿠키로 설정
-                ResponseCookie accessCookie = CookieUtils.createCookie(
-                                "access_token",
-                                accessToken,
-                                cookieDomain,
-                                cookieSecure,
-                                jwtTokenProvider.getAccessTokenExpirySeconds());
+                ResponseCookie accessCookie = cookieUtils.createAccessTokenCookie(accessToken);
                 response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
 
                 // Refresh Token을 HttpOnly 쿠키로 설정
-                ResponseCookie refreshCookie = CookieUtils.createCookie(
-                                "refresh_token",
-                                refreshToken,
-                                cookieDomain,
-                                cookieSecure,
-                                7 * 24 * 60 * 60 // 7일
-                );
+                ResponseCookie refreshCookie = cookieUtils.createRefreshTokenCookie(refreshToken);
                 response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
                 // 프론트엔드로 리다이렉트 (토큰 없이, 쿠키로 전달)

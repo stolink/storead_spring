@@ -1,6 +1,6 @@
 package com.stolink.backend.global.security.jwt;
 
-import com.stolink.backend.global.util.CookieUtils;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,24 +68,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
                 if (ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
                     String token = cookie.getValue();
-                    // 여러 쿠키 중 유효한 것 하나라도 있으면 사용
+                    log.debug("Found access_token cookie: {}...", token.substring(0, Math.min(token.length(), 10)));
+                    
                     try {
                         if (jwtTokenProvider.validateToken(token)) {
                             return token;
+                        } else {
+                            log.debug("Token validation failed for cookie");
                         }
                     } catch (Exception e) {
-                        // 유효하지 않은 토큰(서명 불일치 등)은 무시하고 다음 쿠키 검사
+                        log.debug("Token validation exception: {}", e.getMessage());
                     }
                 }
             }
+        } else {
+            log.debug("No cookies found in request");
         }
 
         // 2. Authorization 헤더에서 확인 (하위 호환성)
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            log.debug("Found Bearer token in header");
             return bearerToken.substring(BEARER_PREFIX.length());
         }
 
+        log.debug("No valid token resolved (Anonymous)");
         return null;
     }
 }

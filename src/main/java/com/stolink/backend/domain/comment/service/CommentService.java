@@ -4,6 +4,7 @@ import com.stolink.backend.domain.chapter.entity.Chapter;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.comment.dto.CommentResponse;
 import com.stolink.backend.domain.comment.dto.CreateCommentRequest;
+import com.stolink.backend.domain.comment.dto.ReplyCountDto;
 import com.stolink.backend.domain.comment.entity.Comment;
 import com.stolink.backend.domain.comment.repository.CommentRepository;
 import com.stolink.backend.domain.user.entity.User;
@@ -25,73 +26,97 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CommentService {
 
-    private final CommentRepository commentRepository;
-    private final ChapterRepository chapterRepository;
-    private final UserRepository userRepository;
+        private final CommentRepository commentRepository;
+        private final ChapterRepository chapterRepository;
+        private final UserRepository userRepository;
 
-    public Page<CommentResponse> getComments(UUID chapterId, Pageable pageable) {
-        return commentRepository.findByChapterIdAndParentIsNullOrderByCreatedAtDesc(chapterId, pageable)
-                .map(comment -> {
-                    int replyCount = commentRepository.countByParentId(comment.getId());
-                    return CommentResponse.from(comment, replyCount);
+        public Page<CommentResponse> getComments(UUID chapterId, String relationId, Pageable pageable) {
+                Page<Comment> comments;
+                if (relationId != null && !relationId.isBlank()) {
+                        comments = commentRepository.findByChapterIdAndParentIsNullAndRelationIdOrderByCreatedAtDesc(
+                                        chapterId, relationId, pageable);
+                } else {
+                        comments = commentRepository
+                                        .findByChapterIdAndParentIsNullAndRelationIdIsNullOrderByCreatedAtDesc(
+                                                        chapterId, pageable);
+                }
+
+                // N+1 문제 해결을 위한 벌크 카운트 쿼리
+                List<UUID> parentIds = comments.getContent().stream()
+                                .map(Comment::getId)
+                                .collect(Collectors.toList());
+
+                java.util.Map<UUID, Long> replyCounts = new java.util.HashMap<>();
+                if (!parentIds.isEmpty()) {
+                        List<ReplyCountDto> results = commentRepository.countRepliesByParentIds(parentIds);
+                        for (ReplyCountDto result : results) {
+                                replyCounts.put(result.parentId(), result.count());
+                        }
+                }
+
+                return comments.map(comment -> {
+                        int replyCount = replyCounts.getOrDefault(comment.getId(), 0L).intValue();
+                        return CommentResponse.from(comment, replyCount);
                 });
-    }
-
-    public List<CommentResponse> getReplies(UUID commentId) {
-        return commentRepository.findByParentIdOrderByCreatedAtAsc(commentId)
-                .stream()
-                .map(comment -> CommentResponse.from(comment, 0))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public CommentResponse createComment(UUID userId, UUID chapterId, CreateCommentRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
-
-        Chapter chapter = chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
-
-        Comment comment = Comment.builder()
-                .chapter(chapter)
-                .user(user)
-                .content(request.getContent())
-                .build();
-
-        Comment saved = commentRepository.save(comment);
-        return CommentResponse.from(saved);
-    }
-
-    @Transactional
-    public CommentResponse createReply(UUID userId, UUID commentId, CreateCommentRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
-
-        Comment parent = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없습니다: " + commentId));
-
-        Comment reply = Comment.builder()
-                .chapter(parent.getChapter())
-                .user(user)
-                .parent(parent)
-                .content(request.getContent())
-                .build();
-
-        Comment saved = commentRepository.save(reply);
-        return CommentResponse.from(saved);
-    }
-
-    @Transactional
-    public void deleteComment(UUID userId, UUID commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없습니다: " + commentId));
-
-        if (!comment.getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("해당 댓글을 삭제할 권한이 없습니다");
         }
 
-        // 답글이 있으면 답글도 삭제
-        commentRepository.deleteByParentId(commentId);
-        commentRepository.delete(comment);
-    }
+        public List<CommentResponse> getReplies(UUID commentId) {
+                return commentRepository.findByParentIdOrderByCreatedAtAsc(commentId)
+                                .stream()
+                                .map(comment -> CommentResponse.from(comment, 0))
+                                .collect(Collectors.toList());
+        }
+
+        @Transactional
+        public CommentResponse createComment(UUID userId, UUID chapterId, CreateCommentRequest request) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
+
+                Chapter chapter = chapterRepository.findById(chapterId)
+                                .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
+
+                Comment comment = Comment.builder()
+                                .chapter(chapter)
+                                .user(user)
+                                .content(request.content())
+                                .relationId(request.relationId())
+                                .build();
+
+                Comment saved = commentRepository.save(comment);
+                return CommentResponse.from(saved);
+        }
+
+        @Transactional
+        public CommentResponse createReply(UUID userId, UUID commentId, CreateCommentRequest request) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
+
+                Comment parent = commentRepository.findById(commentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없습니다: " + commentId));
+
+                Comment reply = Comment.builder()
+                                .chapter(parent.getChapter())
+                                .user(user)
+                                .parent(parent)
+                                .relationId(parent.getRelationId())
+                                .content(request.content())
+                                .build();
+
+                Comment saved = commentRepository.save(reply);
+                return CommentResponse.from(saved);
+        }
+
+        @Transactional
+        public void deleteComment(UUID userId, UUID commentId) {
+                Comment comment = commentRepository.findById(commentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없습니다: " + commentId));
+
+                if (!comment.getUser().getId().equals(userId)) {
+                        throw new AccessDeniedException("해당 댓글을 삭제할 권한이 없습니다");
+                }
+
+                // 답글이 있으면 답글도 삭제
+                commentRepository.deleteByParentId(commentId);
+                commentRepository.delete(comment);
+        }
 }
