@@ -61,37 +61,39 @@ public class DiscoveryController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size,
                         @RequestParam(defaultValue = "createdAt") String sort,
-                        @RequestParam(defaultValue = "desc") String order) {
+                        @RequestParam(defaultValue = "desc") String order,
+                        @RequestParam(required = false) String accessType) {
 
-                log.info("Discovery API: getWorks requested. genres={}, status={}, page={}, size={}, sort={}, order={}",
-                                genres, status, page, size, sort, order);
+                log.info("Discovery API: getWorks requested. genres={}, status={}, page={}, size={}, sort={}, order={}, accessType={}",
+                                genres, status, page, size, sort, order, accessType);
 
                 Sort.Direction direction = "asc".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
                 String sortProperty;
 
                 // 정렬 필드 매핑
                 if (sort == null) {
-                    sortProperty = "createdAt";
+                        sortProperty = "createdAt";
                 } else {
-                    String cleanSort = sort.trim().toLowerCase();
-                    if ("latest".equals(cleanSort) || "createdat".equals(cleanSort)) {
-                        sortProperty = "createdAt";
-                    } else if ("popular".equals(cleanSort)) {
-                        sortProperty = "likeCount";
-                    } else if ("rating".equals(cleanSort)) {
-                        sortProperty = "averageRating";
-                    } else {
-                        // 허용되지 않은 정렬 값은 기본값(createdAt)으로 처리하여 예외 방지
-                        log.warn("Invalid sort property received: {}. Defaulting to createdAt.", sort);
-                        sortProperty = "createdAt";
-                    }
+                        String cleanSort = sort.trim().toLowerCase();
+                        log.info("Sorting debug: sort='{}', cleanSort='{}'", sort, cleanSort);
+                        if ("latest".equals(cleanSort) || "createdat".equals(cleanSort)) {
+                                sortProperty = "createdAt";
+                        } else if ("popular".equals(cleanSort)) {
+                                sortProperty = "likeCount";
+                        } else if ("rating".equals(cleanSort)) {
+                                sortProperty = "averageRating";
+                        } else {
+                                // 허용되지 않은 정렬 값은 기본값(createdAt)으로 처리하여 예외 방지
+                                log.warn("Invalid sort property received: {}. Defaulting to createdAt.", sort);
+                                sortProperty = "createdAt";
+                        }
                 }
 
                 log.info("Mapped sort property: '{}' -> '{}'", sort, sortProperty);
 
                 Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, sortProperty));
 
-                Page<DiscoveryWorkResponse> works = discoveryService.getWorks(genres, status, pageable);
+                Page<DiscoveryWorkResponse> works = discoveryService.getWorks(genres, status, accessType, pageable);
 
                 log.info("Discovery API: Found {} works. Sending response.", works.getTotalElements());
 
@@ -110,14 +112,16 @@ public class DiscoveryController {
                         @RequestParam(defaultValue = "REALTIME") String period,
                         @RequestParam(required = false) String genre,
                         @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
+                        @RequestParam(defaultValue = "20") int size,
+                        @RequestParam(required = false) String accessType) {
 
-                log.info("Discovery API: getRankings requested. period={}, genre={}", period, genre);
+                log.info("Discovery API: getRankings requested. period={}, genre={}, accessType={}", period, genre,
+                                accessType);
 
                 // 랭킹은 기본적으로 순서가 정해져 있으므로 Sort 파라미터 불필요 (Service에서 처리)
                 Pageable pageable = PageRequest.of(page, Math.min(size, 100));
 
-                Page<DiscoveryWorkResponse> works = discoveryService.getRankings(period, genre, pageable);
+                Page<DiscoveryWorkResponse> works = discoveryService.getRankings(period, genre, accessType, pageable);
 
                 return ApiResponse.ok(Map.of(
                                 "works", works.getContent(),

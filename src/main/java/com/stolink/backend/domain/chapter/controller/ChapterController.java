@@ -18,6 +18,7 @@ import java.util.UUID;
 public class ChapterController {
 
     private final ChapterService chapterService;
+    private final com.stolink.backend.domain.stats.service.AuthorStatsService authorStatsService;
 
     @GetMapping("/works/{workId}/chapters")
     public ApiResponse<List<ChapterResponse>> getChapters(
@@ -42,6 +43,12 @@ public class ChapterController {
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         ChapterDetailResponse chapter = chapterService.getChapter(userId, id);
+
+        // Log Chapter Read
+        if (userId != null) {
+            authorStatsService.logChapterRead(chapter.getWorkId(), chapter.getId(), chapter.getChapterNumber(), userId);
+        }
+
         return ApiResponse.ok(chapter);
     }
 

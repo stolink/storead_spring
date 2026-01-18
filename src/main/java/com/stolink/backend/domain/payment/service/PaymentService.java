@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -42,6 +44,9 @@ public class PaymentService {
     private final CreditPackageService creditPackageService;
     private final TransactionTemplate transactionTemplate;
     private final TossPaymentClient tossPaymentClient;
+
+    @org.springframework.beans.factory.annotation.Value("${toss.payments.test-mode:false}")
+    private boolean testMode;
 
     /**
      * 결제 준비 (주문 생성)
@@ -112,7 +117,13 @@ public class PaymentService {
             return PaymentResponse.from(payment);
         }
 
-        // 2. (Non-TX) 토스 API 호출
+        // 2-1. 테스트 모드인 경우 토스 API 호출 스킵 및 즉시 승인 처리
+        if (testMode) {
+            log.info("결제 승인 처리 (테스트 모드): orderId={}, paymentKey={}", request.orderId(), request.paymentKey());
+            return completePaymentProcessWithRetry(request.orderId(), request.paymentKey(), "TEST_CARD");
+        }
+
+        // 2-2. (Non-TX) 토스 API 호출
         TossPaymentConfirmResponse tossResponse;
         try {
             tossResponse = tossPaymentClient.confirmPayment(
@@ -132,7 +143,29 @@ public class PaymentService {
         }
 
         // 4. (TX2-Success) 성공 처리 및 크레딧 지급
-        return completePaymentProcess(request.orderId(), request.paymentKey(), tossResponse.method());
+        return completePaymentProcessWithRetry(request.orderId(), request.paymentKey(), tossResponse.method());
+    }
+
+    /**
+     * 결제 완료 처리 (낙관적 락 충돌 시 재확인)
+     */
+    private PaymentResponse completePaymentProcessWithRetry(String orderId, String paymentKey, String method) {
+        try {
+            return completePaymentProcess(orderId, paymentKey, method);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // 낙관적 락 충돌: 다른 요청이 먼저 처리했는지 확인
+            log.warn("낙관적 락 충돌 발생, 결제 상태 재확인: orderId={}", orderId);
+            Payment payment = paymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new PaymentExceptions.PaymentNotFoundException("주문을 찾을 수 없습니다: " + orderId));
+
+            if (payment.isCompleted()) {
+                log.info("이미 다른 요청에서 결제가 완료됨: orderId={}", orderId);
+                return PaymentResponse.from(payment);
+            }
+
+            // 결제가 완료되지 않은 상태에서 충돌이 발생한 경우 예외 전파
+            throw e;
+        }
     }
 
     private PaymentResponse completePaymentProcess(String orderId, String paymentKey, String method) {

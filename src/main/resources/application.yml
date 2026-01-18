@@ -51,3 +51,4 @@ toss:
     secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
     client-key: ${TOSS_CLIENT_KEY:test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq}
     webhook-secret: ${TOSS_WEBHOOK_SECRET:webhook_secret_key}
+    test-mode: ${TOSS_TEST_MODE:false}
