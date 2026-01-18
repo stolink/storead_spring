@@ -77,7 +77,7 @@ public interface WorkRepository
         /**
          * 기간별 좋아요 순 랭킹 조회
          * - WorkLike 테이블을 기준으로 집계
-         * 
+         *
          * ⚠️ 성능 경고: 데이터가 수십만 건 이상 쌓일 경우 성능 저하 우려
          * 권장 개선사항:
          * - 랭킹 전용 집계 테이블 운영 (일간/주간 배치 집계)
@@ -88,6 +88,26 @@ public interface WorkRepository
                         "GROUP BY wl.work " +
                         "ORDER BY COUNT(wl) DESC, wl.work.likeCount DESC")
         Page<Work> findRankingByPeriod(@Param("startDate") java.time.LocalDateTime startDate, Pageable pageable);
+
+        /**
+         * 기간별 랭킹 조회 (장르, AccessType 필터 포함)
+         */
+        @Query("SELECT wl.work FROM WorkLike wl " +
+                        "WHERE wl.createdAt >= :startDate " +
+                        "AND (:genre IS NULL OR wl.work.genre = :genre) " +
+                        "AND (:accessType IS NULL OR " +
+                        "  (:accessType = 'FREE' AND NOT EXISTS (SELECT c FROM Chapter c WHERE c.work = wl.work AND c.isFree = false)) OR "
+                        +
+                        "  (:accessType = 'PAID' AND EXISTS (SELECT c FROM Chapter c WHERE c.work = wl.work AND c.isFree = false)) "
+                        +
+                        ") " +
+                        "GROUP BY wl.work " +
+                        "ORDER BY COUNT(wl) DESC, wl.work.likeCount DESC")
+        Page<Work> findRankingByPeriodWithFilter(
+                        @Param("startDate") java.time.LocalDateTime startDate,
+                        @Param("genre") com.stolink.backend.domain.work.entity.Genre genre,
+                        @Param("accessType") String accessType,
+                        Pageable pageable);
 
         /**
          * 모든 작품의 좋아요 수를 실제 WorkLike 테이블 기준으로 일괄 동기화

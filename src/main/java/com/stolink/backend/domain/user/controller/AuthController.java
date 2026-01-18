@@ -3,6 +3,8 @@ package com.stolink.backend.domain.user.controller;
 import com.stolink.backend.domain.user.dto.*;
 import com.stolink.backend.domain.user.service.AuthService;
 import com.stolink.backend.global.common.dto.ApiResponse;
+import com.stolink.backend.global.common.exception.InvalidTokenException;
+import com.stolink.backend.global.common.exception.TokenNotFoundException;
 import com.stolink.backend.global.util.CookieUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +90,17 @@ public class AuthController {
                     .header(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(token.getAccessToken()).toString())
                     .header(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(token.getRefreshToken()).toString())
                     .body(ApiResponse.ok(AuthResponse.from(token)));
-        } catch (IllegalArgumentException e) {
+        } catch (TokenNotFoundException e) {
+            // Race Condition 발생 가능성: 이미 Rotation된 토큰일 수 있음
+            // 쿠키를 삭제하지 않고 401 반환 -> 프론트엔드는 실패 처리하되 쿠키는 유지
+            // (다른 병렬 요청이 이미 갱신에 성공했을 수 있음)
+            log.warn("Token not found (Race Condition suspected): {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<AuthResponse>builder()
+                            .status(HttpStatus.UNAUTHORIZED)
+                            .message("인증 실패: " + e.getMessage())
+                            .build());
+        } catch (InvalidTokenException | IllegalArgumentException e) {
             // 토큰 만료, 변조 등 비즈니스 로직 예외 처리
             log.warn("Invalid refresh token request: {}", e.getMessage());
             

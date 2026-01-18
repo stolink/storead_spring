@@ -27,11 +27,12 @@ import java.util.UUID;
 public class WorkController {
 
     private final WorkService workService;
+    private final com.stolink.backend.domain.stats.service.AuthorStatsService authorStatsService;
 
     /**
      * projectId로 작품 조회 (커뮤니티 배포용)
      * GET /api/works?projectId={projectId}
-     * 
+     *
      * 프론트엔드에서 기존 작품이 있는지 확인할 때 사용
      */
     @GetMapping(params = "projectId")
@@ -82,8 +83,14 @@ public class WorkController {
     @GetMapping("/{id}")
     public ApiResponse<WorkResponse> getWork(
             @AuthenticationPrincipal UUID userId,
-            @PathVariable UUID id) {
+            @PathVariable UUID id,
+            @RequestParam(required = false) String source) {
         WorkResponse work = workService.getWork(userId, id);
+
+        // Log Visit
+        if (userId != null) {
+            authorStatsService.logVisit(id, userId, source);
+        }
         return ApiResponse.ok(work);
     }
 

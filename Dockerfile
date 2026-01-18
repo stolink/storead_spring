@@ -14,7 +14,7 @@ RUN addgroup -S spring && adduser -S spring -G spring
 RUN mkdir -p /app/storage/uploads && chown -R spring:spring /app
 
 # Copy pre-built jar file from context (built by GitHub Actions)
-COPY --chown=spring:spring build/libs/*.jar app.jar
+COPY --chown=spring:spring build/libs/sto-read-backend-0.0.1-SNAPSHOT.jar app.jar
 
 # Switch to non-root user
 USER spring:spring

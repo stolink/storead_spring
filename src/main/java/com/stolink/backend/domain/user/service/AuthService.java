@@ -6,7 +6,9 @@ import com.stolink.backend.domain.user.entity.RefreshToken;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.RefreshTokenRepository;
 import com.stolink.backend.domain.user.repository.UserRepository;
+import com.stolink.backend.global.common.exception.InvalidTokenException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
+import com.stolink.backend.global.common.exception.TokenNotFoundException;
 import com.stolink.backend.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,13 +92,13 @@ public class AuthService {
         RefreshToken storedToken = refreshTokenRepository.findByToken(refreshTokenStr)
                 .orElseThrow(() -> {
                     log.warn("Refresh token not found in DB (possibly already rotated): {}", tokenPreview);
-                    return new IllegalArgumentException("유효하지 않은 refresh token입니다. (DB에 존재하지 않음 - Token Rotation 경합 가능성)");
+                    return new TokenNotFoundException("유효하지 않은 refresh token입니다. (DB에 존재하지 않음 - Token Rotation 경합 가능성)");
                 });
 
         // 2. 만료 여부 확인
         if (storedToken.isExpired()) {
             refreshTokenRepository.delete(storedToken);
-            throw new IllegalArgumentException("만료된 refresh token입니다. 다시 로그인해주세요.");
+            throw new InvalidTokenException("만료된 refresh token입니다. 다시 로그인해주세요.");
         }
 
         User user = storedToken.getUser();
