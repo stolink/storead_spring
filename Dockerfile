@@ -22,12 +22,9 @@ USER spring:spring
 # Expose port
 EXPOSE 8080
 
-# Environment variable for port (default 8080)
-ENV APP_PORT=8080
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:${APP_PORT}/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
