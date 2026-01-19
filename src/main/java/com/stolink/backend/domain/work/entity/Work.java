@@ -29,7 +29,7 @@ public class Work extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String synopsis;
 
-    @Column(length = 512)
+    @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
     @Enumerated(EnumType.STRING)

@@ -57,6 +57,9 @@ public class TossPaymentClient {
         } catch (WebClientResponseException e) {
             log.error("토스 결제 승인 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw parseTossError(e);
+        } catch (Exception e) {
+            log.error("토스 결제 승인 중 시스템 오류: {}", e.getMessage());
+            throw new TossPaymentException("SYSTEM_ERROR", "결제 승인 요청 중 오류가 발생했습니다.", 500);
         }
     }
 
@@ -81,6 +84,9 @@ public class TossPaymentClient {
         } catch (WebClientResponseException e) {
             log.error("토스 결제 취소 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw parseTossError(e);
+        } catch (Exception e) {
+            log.error("토스 결제 취소 중 시스템 오류: {}", e.getMessage());
+            throw new TossPaymentException("SYSTEM_ERROR", "결제 취소 요청 중 오류가 발생했습니다.", 500);
         }
     }
 
@@ -97,6 +103,8 @@ public class TossPaymentClient {
                     .block(Duration.ofSeconds(5));
         } catch (WebClientResponseException e) {
             throw parseTossError(e);
+        } catch (Exception e) {
+            throw new TossPaymentException("SYSTEM_ERROR", "결제 조회 요청 중 오류가 발생했습니다.", 500);
         }
     }
 

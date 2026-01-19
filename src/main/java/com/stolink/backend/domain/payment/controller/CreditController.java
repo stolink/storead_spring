@@ -15,15 +15,19 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.stolink.backend.domain.chapter.service.ChapterPurchaseService;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/credits")
+@RequestMapping({ "/api/v1/credits", "/api/credits" })
 @RequiredArgsConstructor
+@Slf4j
 public class CreditController {
 
     private final CreditService creditService;
+    private final ChapterPurchaseService chapterPurchaseService;
 
     /**
      * 크레딧 잔액 조회
@@ -42,6 +46,21 @@ public class CreditController {
     public ResponseEntity<ApiResponse<CreditResponse>> useCredit(
             @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody CreditUseRequest request) {
+
+        // 챕터 구매인 경우 ChapterPurchaseService를 통해 처리하여 구매 기록 생성 보장
+        if ("CHAPTER".equalsIgnoreCase(request.referenceType()) && request.referenceId() != null) {
+            try {
+                UUID chapterId = UUID.fromString(request.referenceId());
+                chapterPurchaseService.purchaseChapter(userId, chapterId);
+                return ResponseEntity.ok(ApiResponse.ok(creditService.getCredit(userId)));
+            } catch (Exception e) {
+                log.error("Failed to process chapter purchase via credit use endpoint: userId={}, chapterId={}",
+                        userId, request.referenceId(), e);
+                // 에러 발생 시 기존 방식으로 진행하지 않고 에러 응답 (구매 기록 없이 크레딧만 차감되는 것 방지)
+                throw e;
+            }
+        }
+
         CreditResponse response = creditService.useCredit(userId, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }

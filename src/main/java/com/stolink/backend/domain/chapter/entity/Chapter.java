@@ -85,6 +85,18 @@ public class Chapter extends BaseEntity {
             this.content = content;
     }
 
+    public void updatePricing(Boolean isFree, Integer price, ChapterAccessType accessType) {
+        if (isFree != null) {
+            this.isFree = isFree;
+        }
+        if (price != null) {
+            this.price = price;
+        }
+        if (accessType != null) {
+            this.accessType = accessType;
+        }
+    }
+
     public void updateChapterNumber(Integer chapterNumber) {
         this.chapterNumber = chapterNumber;
     }

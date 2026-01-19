@@ -45,7 +45,10 @@ public class CreditService {
     @Transactional
     public CreditResponse useCredit(UUID userId, CreditUseRequest request) {
         Credit credit = creditRepository.findByUserIdWithLock(userId)
-            .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException("크레딧 정보를 찾을 수 없습니다."));
+            .orElseGet(() -> {
+                Credit newCredit = Credit.createForUser(userId);
+                return creditRepository.save(newCredit);
+            });
 
         Long balanceBefore = credit.getBalance();
 

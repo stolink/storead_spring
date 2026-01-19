@@ -242,6 +242,30 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.CreditNotFoundException.class)
+        public ResponseEntity<ApiResponse<Void>> handleCreditNotFound(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.CreditNotFoundException ex) {
+                log.error("Credit not found: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.CreditPackageNotFoundException.class)
+        public ResponseEntity<ApiResponse<Void>> handleCreditPackageNotFound(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.CreditPackageNotFoundException ex) {
+                log.error("Credit package not found: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.NOT_FOUND)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
         @ExceptionHandler(com.stolink.backend.domain.payment.exception.TossPaymentException.class)
         public ResponseEntity<ApiResponse<Void>> handleTossPaymentException(
                         com.stolink.backend.domain.payment.exception.TossPaymentException ex) {

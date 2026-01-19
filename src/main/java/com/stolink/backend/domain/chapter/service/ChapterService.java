@@ -64,11 +64,26 @@ public class ChapterService {
                     .orElse(0) + 1;
         }
 
+        // 유료/무료 설정 처리
+        Boolean isFree = request.getIsFree() != null ? request.getIsFree() : true;
+        Integer price = request.getPrice() != null ? request.getPrice() : 0;
+        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = request.getAccessType() != null
+                ? request.getAccessType()
+                : com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE;
+
+        // 유료 챕터의 경우 가격이 0보다 커야 함
+        if (!isFree && price <= 0) {
+            price = 10; // 기본 유료 가격: 10크레딧 (100원)
+        }
+
         Chapter chapter = Chapter.builder()
                 .work(work)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .chapterNumber(chapterNumber)
+                .isFree(isFree)
+                .price(price)
+                .accessType(accessType)
                 .build();
 
         Chapter saved = chapterRepository.save(chapter);
@@ -84,7 +99,14 @@ public class ChapterService {
             throw new AccessDeniedException("해당 챕터에 접근 권한이 없습니다");
         }
 
+        // 제목/내용 업데이트
         chapter.update(request.getTitle(), request.getContent());
+
+        // 유료/무료 설정 업데이트
+        if (request.getIsFree() != null || request.getPrice() != null || request.getAccessType() != null) {
+            chapter.updatePricing(request.getIsFree(), request.getPrice(), request.getAccessType());
+        }
+
         return ChapterDetailResponse.from(chapter);
     }
 

@@ -20,6 +20,7 @@ spring:
 toss:
   payments:
     secret-key: test_sk_Z61JOxRQVEGyxjQX6mDR8W0X9bAq
+    test-mode: true
 # JWT Configuration (same secret as stolink_spring for shared auth)
 jwt:
   secret: ${JWT_SECRET:very-long-and-secure-random-secret-key-that-is-at-least-512-bits-for-hs512-algorithm-security-must-be-kept-secret}

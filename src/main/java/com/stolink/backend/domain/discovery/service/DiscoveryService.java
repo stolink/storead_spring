@@ -36,7 +36,8 @@ public class DiscoveryService {
     /**
      * 작품 목록 조회 (필터링 지원)
      */
-    public Page<DiscoveryWorkResponse> getWorks(List<String> genres, String status, Pageable pageable) {
+    public Page<DiscoveryWorkResponse> getWorks(List<String> genres, String status, String accessType,
+            Pageable pageable) {
         org.springframework.data.jpa.domain.Specification<Work> spec = (root, query, criteriaBuilder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
 
@@ -59,6 +60,23 @@ public class DiscoveryService {
                 }
             }
 
+            // 접근 유형 필터 (FREE, PAID)
+            if (accessType != null && !accessType.isEmpty()) {
+                jakarta.persistence.criteria.Subquery<UUID> subquery = query.subquery(UUID.class);
+                jakarta.persistence.criteria.Root<com.stolink.backend.domain.chapter.entity.Chapter> chapterRoot = subquery
+                        .from(com.stolink.backend.domain.chapter.entity.Chapter.class);
+                subquery.select(chapterRoot.get("work").get("id"));
+                subquery.where(criteriaBuilder.equal(chapterRoot.get("isFree"), false));
+
+                if ("FREE".equalsIgnoreCase(accessType)) {
+                    // 유료 챕터가 하나도 없는 작품
+                    predicates.add(criteriaBuilder.not(root.get("id").in(subquery)));
+                } else if ("PAID".equalsIgnoreCase(accessType)) {
+                    // 유료 챕터가 하나라도 있는 작품
+                    predicates.add(root.get("id").in(subquery));
+                }
+            }
+
             return criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
@@ -69,7 +87,7 @@ public class DiscoveryService {
     /**
      * 랭킹 조회
      */
-    public Page<DiscoveryWorkResponse> getRankings(String period, String genre, Pageable pageable) {
+    public Page<DiscoveryWorkResponse> getRankings(String period, String genre, String accessType, Pageable pageable) {
         Page<Work> workPage;
 
         // 장르 필터가 있으면 처리 (단, period 쿼리와 결합하기 복잡하므로 MVP에서는 ALLTIME 랭킹만 장르 지원하거나,
@@ -89,17 +107,19 @@ public class DiscoveryService {
         }
 
         if (startDate != null) {
-            // 기간별 랭킹 (좋아요 급상승 등)
-            // TODO: 장르 필터까지 적용하려면 Repository 쿼리 수정 필요. 현재는 기간만 적용.
-            workPage = workRepository.findRankingByPeriod(startDate, pageable);
+            // 기간별 랭킹 (좋아요 급상승 등) - 필터 포함
+            com.stolink.backend.domain.work.entity.Genre genreEnum = (genre != null && !genre.isEmpty()
+                    && !"ALL".equalsIgnoreCase(genre))
+                            ? com.stolink.backend.domain.work.entity.Genre.from(genre)
+                            : null;
+
+            workPage = workRepository.findRankingByPeriodWithFilter(startDate, genreEnum, accessType, pageable);
         } else {
             // 전체 기간 (= 실시간/누적 인기순) -> 좋아요 순 정렬 강제
             // DiscoveryController에서 Sort를 받아오더라도, 'RANKING' 로직에서는 likeCount DESC가 기본이어야 함.
-            // 하지만 Pageable에 이미 Sort가 포함되어 있을 수 있음.
-            // 클라이언트가 파라미터로 sort=likeCount,desc를 보내준다면 findAll(pageable)로 충분.
 
             // 만약 period가 ALL-TIME이거나 null인데 랭킹 조회라면 likeCount 정렬을 강제하는 것이 안전.
-            if ("ALL-TIME".equalsIgnoreCase(period) || period == null) {
+            if ("ALL-TIME".equalsIgnoreCase(period) || "REALTIME".equalsIgnoreCase(period) || period == null) {
                 // Pageable에서 Sort 재정의 필요
                 pageable = org.springframework.data.domain.PageRequest.of(
                         pageable.getPageNumber(),
@@ -108,13 +128,35 @@ public class DiscoveryService {
                                 "likeCount"));
             }
 
-            if (genre != null && !genre.isEmpty() && !"ALL".equalsIgnoreCase(genre)) {
-                com.stolink.backend.domain.work.entity.Genre genreEnum = com.stolink.backend.domain.work.entity.Genre
-                        .from(genre);
-                workPage = workRepository.findAllByGenre(genreEnum, pageable);
-            } else {
-                workPage = workRepository.findAll(pageable);
-            }
+            // 장르 및 AccessType 필터 적용
+            org.springframework.data.jpa.domain.Specification<Work> spec = (root, query, criteriaBuilder) -> {
+                List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+
+                // 장르 필터
+                if (genre != null && !genre.isEmpty() && !"ALL".equalsIgnoreCase(genre)) {
+                    com.stolink.backend.domain.work.entity.Genre genreEnum = com.stolink.backend.domain.work.entity.Genre
+                            .from(genre);
+                    predicates.add(criteriaBuilder.equal(root.get("genre"), genreEnum));
+                }
+
+                // AccessType 필터
+                if (accessType != null && !accessType.isEmpty()) {
+                    jakarta.persistence.criteria.Subquery<UUID> subquery = query.subquery(UUID.class);
+                    jakarta.persistence.criteria.Root<com.stolink.backend.domain.chapter.entity.Chapter> chapterRoot = subquery
+                            .from(com.stolink.backend.domain.chapter.entity.Chapter.class);
+                    subquery.select(chapterRoot.get("work").get("id"));
+                    subquery.where(criteriaBuilder.equal(chapterRoot.get("isFree"), false));
+
+                    if ("FREE".equalsIgnoreCase(accessType)) {
+                        predicates.add(criteriaBuilder.not(root.get("id").in(subquery)));
+                    } else if ("PAID".equalsIgnoreCase(accessType)) {
+                        predicates.add(root.get("id").in(subquery));
+                    }
+                }
+                return criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            };
+
+            workPage = workRepository.findAll(spec, pageable);
         }
 
         return convertToResponse(workPage);
@@ -122,7 +164,7 @@ public class DiscoveryService {
 
     // 오버로딩 (기존 코드 호환용)
     public Page<DiscoveryWorkResponse> getWorks(Pageable pageable) {
-        return getWorks(null, null, pageable);
+        return getWorks(null, null, null, pageable);
     }
 
     /**

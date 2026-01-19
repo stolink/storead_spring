@@ -96,7 +96,10 @@ public class Payment {
      * 결제 진행 중 (READY -> IN_PROGRESS)
      */
     public void markAsInProgress(String paymentKey) {
-        validateStatusTransition(PaymentStatus.READY, PaymentStatus.IN_PROGRESS);
+        if (this.status != PaymentStatus.PENDING && this.status != PaymentStatus.READY) {
+            throw new IllegalStateException(
+                    String.format("잘못된 상태 전이입니다. 현재: %s, 대상: %s", this.status, PaymentStatus.IN_PROGRESS));
+        }
         this.paymentKey = paymentKey;
         this.status = PaymentStatus.IN_PROGRESS;
     }
@@ -106,11 +109,10 @@ public class Payment {
      */
     public void approve(String paymentKey, String paymentMethod) {
         if (this.status != PaymentStatus.PENDING &&
-            this.status != PaymentStatus.READY &&
-            this.status != PaymentStatus.IN_PROGRESS) {
+                this.status != PaymentStatus.READY &&
+                this.status != PaymentStatus.IN_PROGRESS) {
             throw new IllegalStateException(
-                String.format("결제 승인 불가 상태입니다. 현재: %s", this.status)
-            );
+                    String.format("결제 승인 불가 상태입니다. 현재: %s", this.status));
         }
         this.paymentKey = paymentKey;
         this.paymentMethod = paymentMethod;
@@ -124,16 +126,14 @@ public class Payment {
     public void cancel(Long cancelAmount, String reason) {
         if (this.status != PaymentStatus.DONE && this.status != PaymentStatus.PARTIAL_CANCELED) {
             throw new IllegalStateException(
-                String.format("취소 불가 상태입니다. 현재: %s", this.status)
-            );
+                    String.format("취소 불가 상태입니다. 현재: %s", this.status));
         }
 
         Long remainingAmount = this.amount - this.canceledAmount;
         if (cancelAmount > remainingAmount) {
             throw new IllegalArgumentException(
-                String.format("취소 금액이 남은 금액을 초과합니다. 남은 금액: %d, 취소 요청: %d",
-                    remainingAmount, cancelAmount)
-            );
+                    String.format("취소 금액이 남은 금액을 초과합니다. 남은 금액: %d, 취소 요청: %d",
+                            remainingAmount, cancelAmount));
         }
 
         this.canceledAmount += cancelAmount;
@@ -169,9 +169,8 @@ public class Payment {
     private void validateStatusTransition(PaymentStatus expected, PaymentStatus target) {
         if (this.status != expected) {
             throw new IllegalStateException(
-                String.format("잘못된 상태 전이입니다. 현재: %s, 예상: %s, 대상: %s",
-                    this.status, expected, target)
-            );
+                    String.format("잘못된 상태 전이입니다. 현재: %s, 예상: %s, 대상: %s",
+                            this.status, expected, target));
         }
     }
 
