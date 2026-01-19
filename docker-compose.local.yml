@@ -24,11 +24,11 @@ services:
       # Spring Profile
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       # PostgreSQL (stolink_spring에서 제공)
-      SPRING_DATASOURCE_URL: jdbc:postgresql://stolink-postgres-local:5432/stolink
+      SPRING_DATASOURCE_URL: jdbc:postgresql://stolink-postgres:5432/stolink
       SPRING_DATASOURCE_USERNAME: stolink
       SPRING_DATASOURCE_PASSWORD: stolink123
       # Neo4j (stolink_spring에서 제공)
-      SPRING_NEO4J_URI: bolt://stolink-neo4j-local:7687
+      SPRING_NEO4J_URI: bolt://stolink-neo4j:7687
       SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
       SPRING_NEO4J_AUTHENTICATION_PASSWORD: stolink123
       # Storage path
@@ -37,8 +37,11 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:5174}
       # OAuth2 Redirect URI (Conflict resolution: use specific env var or default to 5174)
       OAUTH2_REDIRECT_URI: ${STOREAD_OAUTH2_REDIRECT_URI:-http://localhost:5174/oauth2/callback}
-      OAUTH2_DEFAULT_FAILURE_URL: ${STOREAD_OAUTH2_DEFAULT_FAILURE_URL:-http://localhost:5174/oauth2/callback}
       OAUTH2_ALLOWED_REDIRECT_HOSTS: ${STOREAD_OAUTH2_ALLOWED_REDIRECT_HOSTS:-localhost,storead.stolink.com}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-very-long-and-secure-random-secret-key-that-is-at-least-512-bits-for-hs512-algorithm-security-must-be-kept-secret}
+      # App Port for healthcheck
+      APP_PORT: 8081
     ports:
       - "8081:8081" # 로컬: 외부 8081 → 내부 8081
     volumes:
@@ -47,7 +50,7 @@ services:
       - stolink-shared-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8081}/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -58,4 +61,5 @@ volumes:
 
 networks:
   stolink-shared-network:
-    external: true # stolink_spring/docker-compose.local.yml에서 생성한 네트워크 사용
+    external: true
+    name: stolink_fastapi_agent_stolink-network # stolink_fastapi_agent/docker-compose.standalone.yml에서 생성한 네트워크 사용
