@@ -69,7 +69,7 @@ public class Draft {
     @Column(name = "work_genre")
     private String workGenre;
 
-    @Column(name = "work_cover_url")
+    @Column(name = "work_cover_url", columnDefinition = "TEXT")
     private String workCoverUrl;
 
     @Enumerated(EnumType.STRING)
