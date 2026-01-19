@@ -134,7 +134,7 @@ jobs:
 
           # 프롬프트 구성 (들여쓰기 주의)
           prompt_intro = "당신은 StoRead Backend 프로젝트(Java 21/Spring Boot 3.4.1)의 시니어 백엔드 개발자이자 DBA 전문가입니다."
-          
+
           prompt = f"""{prompt_intro}
 
           ## 프로젝트 컨텍스트
@@ -198,7 +198,7 @@ jobs:
               sys.exit(1)
 
 
-          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
           payload = {
               "contents": [{"parts": [{"text": prompt}]}],
