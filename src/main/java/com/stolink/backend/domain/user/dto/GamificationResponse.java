@@ -15,11 +15,13 @@ public class GamificationResponse {
     private boolean isTodayChecked;
 
     public static GamificationResponse from(UserGamification entity) {
+        String title = "독자".equals(entity.getTitle()) ? entity.getUser().getNickname() : entity.getTitle();
+
         return GamificationResponse.builder()
                 .level(entity.getLevel())
                 .exp(entity.getExp())
                 .maxExp(entity.getMaxExp())
-                .title(entity.getTitle())
+                .title(title)
                 .attendanceStreak(entity.getAttendanceStreak())
                 .isTodayChecked(entity.isCheckedToday())
                 .build();
