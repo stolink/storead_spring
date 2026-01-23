@@ -2,12 +2,15 @@ package com.stolink.backend.domain.chapter.service;
 
 import com.stolink.backend.domain.chapter.dto.*;
 import com.stolink.backend.domain.chapter.entity.Chapter;
+import com.stolink.backend.domain.chapter.event.ChapterDeletedEvent;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
 import com.stolink.backend.global.common.exception.AccessDeniedException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -22,9 +26,11 @@ public class ChapterService {
 
     private final ChapterRepository chapterRepository;
     private final WorkRepository workRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<ChapterResponse> getChapters(UUID userId, UUID workId) {
-        Work work = workRepository.findByIdAndAuthorId(workId, userId)
+        // 권한 검증: 해당 사용자의 작품인지 확인
+        workRepository.findByIdAndAuthorId(workId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
         return chapterRepository.findByWorkIdOrderByChapterNumberAsc(workId)
@@ -112,7 +118,8 @@ public class ChapterService {
 
     @Transactional
     public void deleteChapter(UUID userId, UUID chapterId) {
-        Chapter chapter = chapterRepository.findById(chapterId)
+        // N+1 문제 해결을 위해 Work, Author를 함께 조회
+        Chapter chapter = chapterRepository.findByIdWithWorkAndAuthor(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
 
         if (!chapter.getWork().getAuthor().getId().equals(userId)) {
@@ -122,7 +129,16 @@ public class ChapterService {
         UUID workId = chapter.getWork().getId();
         int deletedChapterNumber = chapter.getChapterNumber();
 
+        // 삭제 전 documentIds 추출 (Stolink 동기화용)
+        List<String> documentIds = chapter.getAllDocumentIds();
+        log.info("[ChapterService] Deleting chapter: id={}, documentIds={}", chapterId, documentIds);
+
         chapterRepository.delete(chapter);
+
+        // Stolink Document 게시 상태 업데이트 (이벤트 발행 - 트랜잭션 커밋 후 리스너에서 처리)
+        if (!documentIds.isEmpty()) {
+            eventPublisher.publishEvent(new ChapterDeletedEvent(documentIds));
+        }
 
         // 삭제된 챕터 이후의 챕터들 번호 -1
         List<Chapter> chaptersToShift = chapterRepository
