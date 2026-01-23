@@ -19,6 +19,10 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
 
         Optional<Chapter> findByIdAndWorkId(UUID id, UUID workId);
 
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "work", "work.author" })
+        @Query("SELECT c FROM Chapter c WHERE c.id = :chapterId")
+        Optional<Chapter> findByIdWithWorkAndAuthor(@Param("chapterId") UUID chapterId);
+
         int countByWorkId(UUID workId);
 
         @Query("SELECT MAX(c.chapterNumber) FROM Chapter c WHERE c.work.id = :workId")

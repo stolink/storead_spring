@@ -2,14 +2,15 @@ package com.stolink.backend.domain.chapter.service;
 
 import com.stolink.backend.domain.chapter.dto.*;
 import com.stolink.backend.domain.chapter.entity.Chapter;
+import com.stolink.backend.domain.chapter.event.ChapterDeletedEvent;
 import com.stolink.backend.domain.chapter.repository.ChapterRepository;
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.domain.work.repository.WorkRepository;
-import com.stolink.backend.domain.draft.service.DocumentPublishService;
 import com.stolink.backend.global.common.exception.AccessDeniedException;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +26,7 @@ public class ChapterService {
 
     private final ChapterRepository chapterRepository;
     private final WorkRepository workRepository;
-    // Stolink Document 게시 상태 동기화를 위한 서비스
-    private final DocumentPublishService documentPublishService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<ChapterResponse> getChapters(UUID userId, UUID workId) {
         // 권한 검증: 해당 사용자의 작품인지 확인
@@ -118,7 +118,8 @@ public class ChapterService {
 
     @Transactional
     public void deleteChapter(UUID userId, UUID chapterId) {
-        Chapter chapter = chapterRepository.findById(chapterId)
+        // N+1 문제 해결을 위해 Work, Author를 함께 조회
+        Chapter chapter = chapterRepository.findByIdWithWorkAndAuthor(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
 
         if (!chapter.getWork().getAuthor().getId().equals(userId)) {
@@ -134,16 +135,9 @@ public class ChapterService {
 
         chapterRepository.delete(chapter);
 
-        // Stolink Document 게시 상태 업데이트 (배포 → 미배포)
+        // Stolink Document 게시 상태 업데이트 (이벤트 발행 - 트랜잭션 커밋 후 리스너에서 처리)
         if (!documentIds.isEmpty()) {
-            try {
-                documentPublishService.markAsUnpublished(documentIds);
-                log.info("[ChapterService] Stolink documents unpublished: count={}", documentIds.size());
-            } catch (Exception e) {
-                // Stolink 동기화 실패해도 챕터 삭제는 계속 진행 (best-effort)
-                log.warn("[ChapterService] Failed to sync Stolink document status, but chapter deleted: {}",
-                        e.getMessage());
-            }
+            eventPublisher.publishEvent(new ChapterDeletedEvent(documentIds));
         }
 
         // 삭제된 챕터 이후의 챕터들 번호 -1

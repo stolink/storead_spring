@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
+
 @Getter
 public class ApiResponse<T> {
 
@@ -34,5 +36,9 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> accepted(T data) {
         return new ApiResponse<>(HttpStatus.ACCEPTED, "Accepted", data);
+    }
+
+    public static ApiResponse<Map<String, String>> error(String message) {
+        return new ApiResponse<>(HttpStatus.BAD_REQUEST, message, null);
     }
 }
