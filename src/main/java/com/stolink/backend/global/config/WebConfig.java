@@ -29,4 +29,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true)
                 .maxAge(3600);
     }
+
+    @Override
+    public void addResourceHandlers(
+            org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+        // ./storage/uploads 경로를 /covers/** 및 /uploads/** 로 서비스
+        registry.addResourceHandler("/covers/**", "/uploads/**")
+                .addResourceLocations("file:./storage/uploads/covers/", "file:./storage/uploads/uploads/");
+    }
 }
