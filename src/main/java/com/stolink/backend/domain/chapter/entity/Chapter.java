@@ -2,10 +2,10 @@ package com.stolink.backend.domain.chapter.entity;
 
 import com.stolink.backend.domain.work.entity.Work;
 import com.stolink.backend.global.common.entity.BaseEntity;
-import io.hypersistence.utils.hibernate.type.json.JsonType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
 
 import java.util.List;
 import java.util.Map;
@@ -44,12 +44,12 @@ public class Chapter extends BaseEntity {
     private String documentId;
 
     // 시나리오 C용: 병합 배포 시 사용 (다중 문서 ID 배열)
-    @Type(JsonType.class)
-    @Column(name = "document_ids", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "document_ids")
     private List<String> documentIds;
 
-    @Type(JsonType.class)
-    @Column(name = "graph_snapshot", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "graph_snapshot")
     private Map<String, Object> graphSnapshot;
 
     @Column(nullable = false)
