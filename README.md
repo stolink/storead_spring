@@ -410,7 +410,7 @@ erDiagram
 
     user_credits {
         uuid id PK
-        uuid user_id FK UK
+        uuid user_id FK "UK"
         bigint balance
         timestamp created_at
         timestamp updated_at
