@@ -92,7 +92,7 @@ public class ChapterService {
                 .accessType(accessType)
                 .build();
 
-        Chapter saved = chapterRepository.saveAndFlush(chapter);
+        Chapter saved = chapterRepository.save(chapter);
         return ChapterResponse.from(saved);
     }
 

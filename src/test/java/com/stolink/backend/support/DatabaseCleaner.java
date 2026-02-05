@@ -19,6 +19,9 @@ public class DatabaseCleaner {
 
     private List<String> tableNames;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.jpa.database-platform}")
+    private String databasePlatform;
+
     @Transactional
     public void execute() {
         if (tableNames == null) {
@@ -29,15 +32,26 @@ public class DatabaseCleaner {
         }
 
         entityManager.flush();
-        entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate(); // H2용 (로컬 호환)
-        // PostgreSQL용: entityManager.createNativeQuery("SET CONSTRAINTS ALL
-        // DEFERRED").executeUpdate();
 
-        for (String tableName : tableNames) {
-            entityManager.createNativeQuery("TRUNCATE TABLE " + tableName + " RESTART IDENTITY").executeUpdate();
+        if (databasePlatform.contains("H2")) {
+            entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate();
+        } else if (databasePlatform.contains("PostgreSQL")) {
+            entityManager.createNativeQuery("SET CONSTRAINTS ALL DEFERRED").executeUpdate();
         }
 
-        entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY TRUE").executeUpdate();
+        for (String tableName : tableNames) {
+            if (databasePlatform.contains("PostgreSQL")) {
+                entityManager.createNativeQuery("TRUNCATE TABLE " + tableName + " CASCADE").executeUpdate();
+            } else {
+                entityManager.createNativeQuery("TRUNCATE TABLE " + tableName + " RESTART IDENTITY").executeUpdate();
+            }
+        }
+
+        if (databasePlatform.contains("H2")) {
+            entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY TRUE").executeUpdate();
+        } else if (databasePlatform.contains("PostgreSQL")) {
+            entityManager.createNativeQuery("SET CONSTRAINTS ALL IMMEDIATE").executeUpdate();
+        }
     }
 
     private String getTableName(EntityType<?> entity) {
