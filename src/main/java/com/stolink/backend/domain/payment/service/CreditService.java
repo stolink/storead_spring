@@ -11,6 +11,7 @@ import com.stolink.backend.domain.payment.repository.CreditRepository;
 import com.stolink.backend.domain.payment.repository.CreditTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,8 +34,13 @@ public class CreditService {
     public CreditResponse getCredit(UUID userId) {
         Credit credit = creditRepository.findByUserId(userId)
             .orElseGet(() -> {
-                Credit newCredit = Credit.createForUser(userId);
-                return creditRepository.save(newCredit);
+                try {
+                    return creditRepository.save(Credit.createForUser(userId));
+                } catch (DataIntegrityViolationException e) {
+                    return creditRepository.findByUserId(userId)
+                        .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException(
+                            "크레딧 생성 중 오류가 발생했습니다."));
+                }
             });
         return CreditResponse.from(credit);
     }
@@ -46,8 +52,13 @@ public class CreditService {
     public CreditResponse useCredit(UUID userId, CreditUseRequest request) {
         Credit credit = creditRepository.findByUserIdWithLock(userId)
             .orElseGet(() -> {
-                Credit newCredit = Credit.createForUser(userId);
-                return creditRepository.save(newCredit);
+                try {
+                    return creditRepository.save(Credit.createForUser(userId));
+                } catch (DataIntegrityViolationException e) {
+                    return creditRepository.findByUserIdWithLock(userId)
+                        .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException(
+                            "크레딧 생성 중 오류가 발생했습니다."));
+                }
             });
 
         Long balanceBefore = credit.getBalance();
