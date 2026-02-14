@@ -147,6 +147,42 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.PaymentNotCancelableException.class)
+        public ResponseEntity<ApiResponse<Void>> handlePaymentNotCancelable(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.PaymentNotCancelableException ex) {
+                log.error("Payment not cancelable: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.CONFLICT)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidCancelAmountException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInvalidCancelAmount(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidCancelAmountException ex) {
+                log.error("Invalid cancel amount: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidPaymentStateException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInvalidPaymentState(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidPaymentStateException ex) {
+                log.error("Invalid payment state: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
                 log.error("Internal server error", ex);
