@@ -33,8 +33,9 @@ public class PaymentController {
     @PostMapping("/prepare")
     public ResponseEntity<ApiResponse<PaymentPrepareResponse>> preparePayment(
             @AuthenticationPrincipal UUID userId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody PaymentPrepareRequest request) {
-        PaymentPrepareResponse response = paymentService.preparePayment(userId, request);
+        PaymentPrepareResponse response = paymentService.preparePayment(userId, request, idempotencyKey);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

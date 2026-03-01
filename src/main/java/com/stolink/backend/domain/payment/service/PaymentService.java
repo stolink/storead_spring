@@ -55,14 +55,19 @@ public class PaymentService {
      * 결제 준비 (주문 생성)
      */
     @Transactional
-    public PaymentPrepareResponse preparePayment(UUID userId, PaymentPrepareRequest request) {
+    public PaymentPrepareResponse preparePayment(UUID userId, PaymentPrepareRequest request,
+            String clientIdempotencyKey) {
         CreditPackage creditPackage = creditPackageService.getPackage(request.packageId());
 
         String orderId = generateOrderId();
-        String idempotencyKey = generateIdempotencyKey(userId, orderId);
+
+        // 클라이언트가 명시적으로 멱등키를 제공한 경우 우선 사용, 없으면 자동 생성 후 할당
+        String idempotencyKey = (clientIdempotencyKey != null && !clientIdempotencyKey.isBlank())
+                ? "IDEM-" + clientIdempotencyKey
+                : generateIdempotencyKey(userId, orderId);
 
         if (paymentRepository.existsByIdempotencyKey(idempotencyKey)) {
-            throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중인 결제가 있습니다.");
+            throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중이거나 중복된 결제 요청입니다.");
         }
 
         Payment payment = Payment.builder()
@@ -132,7 +137,9 @@ public class PaymentService {
             tossResponse = tossPaymentClient.confirmPayment(
                     request.paymentKey(),
                     request.orderId(),
-                    request.amount());
+                    request.amount(),
+                    request.orderId() // 멱등키로 고유한 주문 번호(orderId) 사용
+            );
         } catch (TossPaymentException e) {
             // 3. (TX2-Fail) 실패 처리
             transactionTemplate.executeWithoutResult(status -> {
@@ -243,10 +250,15 @@ public class PaymentService {
 
         // 2. (Non-TX) 토스 API 호출
         try {
+            // 결제 고유 ID와 취소 금액을 묶어서 취소 요청별 고유한 멱등키 생성
+            String cancelIdempotencyKey = UUID.nameUUIDFromBytes(
+                    (ctx.payment().getId().toString() + "_" + ctx.cancelAmount()).getBytes()).toString();
+
             tossPaymentClient.cancelPayment(
                     ctx.payment().getPaymentKey(),
                     request.cancelReason(),
-                    ctx.cancelAmount());
+                    ctx.cancelAmount(),
+                    cancelIdempotencyKey);
         } catch (TossPaymentException e) {
             log.error("토스 결제 취소 실패: paymentKey={}, error={}", ctx.payment().getPaymentKey(), e.getMessage());
             throw e;

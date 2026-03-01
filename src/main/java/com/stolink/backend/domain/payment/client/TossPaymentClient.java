@@ -22,16 +22,15 @@ import java.util.Map;
 @Slf4j
 public class TossPaymentClient {
 
-    private static final String TOSS_API_URL = "https://api.tosspayments.com/v1";
-
     private final WebClient webClient;
     private final String secretKey;
 
     public TossPaymentClient(
             WebClient.Builder webClientBuilder,
-            @Value("${toss.payments.secret-key}") String secretKey) {
+            @Value("${toss.payments.secret-key}") String secretKey,
+            @Value("${toss.payments.api-url:https://api.tosspayments.com/v1}") String apiUrl) {
         this.webClient = webClientBuilder
-                .baseUrl(TOSS_API_URL)
+                .baseUrl(apiUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
         this.secretKey = secretKey;
@@ -40,13 +39,16 @@ public class TossPaymentClient {
     /**
      * 결제 승인
      */
-    public TossPaymentConfirmResponse confirmPayment(String paymentKey, String orderId, Long amount) {
-        log.info("토스 결제 승인 요청: paymentKey={}, orderId={}, amount={}", paymentKey, orderId, amount);
+    public TossPaymentConfirmResponse confirmPayment(String paymentKey, String orderId, Long amount,
+            String idempotencyKey) {
+        log.info("토스 결제 승인 요청: paymentKey={}, orderId={}, amount={}, idempotencyKey={}", paymentKey, orderId, amount,
+                idempotencyKey);
 
         try {
             return webClient.post()
                     .uri("/payments/confirm")
                     .header(HttpHeaders.AUTHORIZATION, buildAuthorizationHeader())
+                    .header("Idempotency-Key", idempotencyKey)
                     .bodyValue(Map.of(
                             "paymentKey", paymentKey,
                             "orderId", orderId,
@@ -66,8 +68,10 @@ public class TossPaymentClient {
     /**
      * 결제 취소
      */
-    public TossPaymentCancelResponse cancelPayment(String paymentKey, String cancelReason, Long cancelAmount) {
-        log.info("토스 결제 취소 요청: paymentKey={}, reason={}, amount={}", paymentKey, cancelReason, cancelAmount);
+    public TossPaymentCancelResponse cancelPayment(String paymentKey, String cancelReason, Long cancelAmount,
+            String idempotencyKey) {
+        log.info("토스 결제 취소 요청: paymentKey={}, reason={}, amount={}, idempotencyKey={}", paymentKey, cancelReason,
+                cancelAmount, idempotencyKey);
 
         try {
             Map<String, Object> requestBody = cancelAmount != null
@@ -77,6 +81,7 @@ public class TossPaymentClient {
             return webClient.post()
                     .uri("/payments/{paymentKey}/cancel", paymentKey)
                     .header(HttpHeaders.AUTHORIZATION, buildAuthorizationHeader())
+                    .header("Idempotency-Key", idempotencyKey)
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(TossPaymentCancelResponse.class)
