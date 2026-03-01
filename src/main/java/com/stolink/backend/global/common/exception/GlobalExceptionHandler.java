@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.hibernate.exception.SQLGrammarException;
+import org.springframework.jdbc.BadSqlGrammarException;
 
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -311,6 +313,17 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.<Void>builder()
                                                 .status(HttpStatus.BAD_GATEWAY)
                                                 .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler({ SQLGrammarException.class, BadSqlGrammarException.class })
+        public ResponseEntity<ApiResponse<Void>> handleSqlGrammarException(Exception ex) {
+                log.error("SQL Grammar Exception: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .message("데이터베이스 처리 중 오류가 발생했습니다.")
                                                 .build());
         }
 }

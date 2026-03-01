@@ -35,8 +35,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run tests
+      - name: Run Unit Tests
         run: ./gradlew test
+
+      - name: Run Integration Tests
+        run: ./gradlew integrationTest
+        env:
+          CI: "true"
+          # Testcontainers Reusable Containers 활성화를 위한 설정
+          TESTCONTAINERS_REUSE_ENABLE: "true"
 
   build-and-push:
     runs-on: ubuntu-24.04-arm # ARM64 native runner (에뮬레이션 오버헤드 제거)

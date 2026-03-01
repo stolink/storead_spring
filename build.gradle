@@ -54,6 +54,7 @@ dependencies {
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testRuntimeOnly 'com.h2database:h2'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
@@ -61,12 +62,38 @@ dependencies {
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 
+	// Testcontainers
+	testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
+	testImplementation 'org.testcontainers:postgresql:1.20.1'
+
+	// WireMock
+	testImplementation 'org.wiremock:wiremock-standalone:3.9.1'
+
 	// Dotenv
 	implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'IntegrationTest'
+	}
+	systemProperty 'spring.profiles.active', 'test-local'
+	testLogging {
+		showStandardStreams = true
+	}
+}
+
+task integrationTest(type: Test) {
+	group = 'verification'
+	description = 'Runs integration tests.'
+	useJUnitPlatform {
+		includeTags 'IntegrationTest'
+	}
+	systemProperty 'spring.profiles.active', 'test-local'
+	// CI 환경에서는 test-ci 프로파일 사용 (명령어로 주입 가능)
+	if (System.getenv('CI') == 'true') {
+		systemProperty 'spring.profiles.active', 'test-ci'
+	}
 	testLogging {
 		showStandardStreams = true
 	}
@@ -77,7 +104,7 @@ jacoco {
 }
 
 jacocoTestReport {
-    dependsOn test
+    dependsOn test, integrationTest
     reports {
         html.required = true
         xml.required = true

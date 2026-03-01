@@ -1,11 +1,11 @@
 package com.stolink.backend.domain.payment.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -77,8 +77,8 @@ public class Payment {
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
 
-    @Type(JsonBinaryType.class)
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata")
     private JsonNode metadata;
 
     @Version

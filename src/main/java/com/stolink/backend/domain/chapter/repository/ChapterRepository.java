@@ -19,6 +19,10 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
 
         Optional<Chapter> findByIdAndWorkId(UUID id, UUID workId);
 
+        @org.springframework.data.jpa.repository.EntityGraph(attributePaths = { "work", "work.author" })
+        @Query("SELECT c FROM Chapter c WHERE c.id = :chapterId")
+        Optional<Chapter> findByIdWithWorkAndAuthor(@Param("chapterId") UUID chapterId);
+
         int countByWorkId(UUID workId);
 
         @Query("SELECT MAX(c.chapterNumber) FROM Chapter c WHERE c.work.id = :workId")
@@ -52,20 +56,4 @@ public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
          * 시나리오 A, B용: 단일 documentId 필드에서 중복 체크
          */
         boolean existsByWorkIdAndDocumentId(UUID workId, String documentId);
-
-        /**
-         * 시나리오 C용: documentIds JSONB 배열에서 중복 체크
-         * 특정 Work 내에 주어진 documentId가 포함된 Chapter가 존재하는지 확인
-         */
-        @Query(value = "SELECT EXISTS(" +
-                        "SELECT 1 FROM chapters c " +
-                        "WHERE c.work_id = :workId " +
-                        "AND c.document_ids @> jsonb_build_array(CAST(:documentId AS text))" +
-                        ")", nativeQuery = true)
-        boolean existsByWorkIdAndDocumentIdInArray(@Param("workId") UUID workId,
-                        @Param("documentId") String documentId);
-
-        // 참고: existsByWorkIdAndAnyDocumentIds, findDuplicateDocumentIds 메서드는
-        // Spring Data JPA가 List<String>을 PostgreSQL text[]로 변환할 수 없어 500 에러가 발생했습니다.
-        // 해당 로직은 ChapterDuplicationChecker 서비스로 이동되었습니다.
 }
