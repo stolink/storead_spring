@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: email, profile
+            redirect-uri: "{baseUrl}/api/login/oauth2/code/{registrationId}"
+
+toss:
+  payments:
+    secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+    client-key: test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq
+    webhook-secret: webhook_secret_key
+    test-mode: true
+    base-url: http://localhost # MockWebServer에서 오버라이드됨
+
+jwt:
+  secret: very-long-and-secure-random-secret-key-that-is-at-least-512-bits-for-hs512-algorithm-security-must-be-kept-secret
+  access-token-expiry: 1800000
+  refresh-token-expiry: 604800000
+  cookie-domain: localhost
+  cookie-secure: false
+  cookie-same-site: Lax
+
+oauth2:
+  redirect-uri: http://localhost:5174/oauth2/callback
+  default-failure-url: http://localhost:5174/oauth2/callback
+  allowed-redirect-hosts: localhost
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+  storage:
+    base-path: ./build/storage/uploads

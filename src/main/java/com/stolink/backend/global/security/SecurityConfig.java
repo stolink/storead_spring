@@ -59,6 +59,7 @@ public class SecurityConfig {
                                                                 "/api/login/oauth2/**",
                                                                 "/api/v1/payments/packages",
                                                                 "/api/payments/packages",
+                                                                "/api/v1/webhooks/**",
                                                                 "/actuator/health",
                                                                 "/actuator/info",
                                                                 "/covers/**",

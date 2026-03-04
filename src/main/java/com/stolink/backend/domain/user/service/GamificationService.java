@@ -29,18 +29,18 @@ public class GamificationService {
     @Transactional
     public AttendanceResponse checkAttendance(UUID userId) {
         UserGamification gamification = getOrCreateGamification(userId);
-        
-        int expGained = 50; 
-        
+
+        int expGained = 50;
+
         if (gamification.isCheckedToday()) {
-             return AttendanceResponse.builder()
-                .attendanceStreak(gamification.getAttendanceStreak())
-                .expGained(0)
-                .build();
+            return AttendanceResponse.builder()
+                    .attendanceStreak(gamification.getAttendanceStreak())
+                    .expGained(0)
+                    .build();
         }
 
         gamification.markAttendance(LocalDate.now(), expGained);
-        
+
         return AttendanceResponse.builder()
                 .attendanceStreak(gamification.getAttendanceStreak())
                 .expGained(expGained)
@@ -52,9 +52,10 @@ public class GamificationService {
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new IllegalArgumentException("User not found"));
-                    
+
                     return gamificationRepository.save(UserGamification.builder()
                             .user(user)
+                            .title(user.getNickname())
                             .build());
                 });
     }
