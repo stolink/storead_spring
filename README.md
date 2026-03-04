@@ -439,7 +439,7 @@ erDiagram
 
     credits {
         uuid id PK
-        uuid user_id FK UK
+        uuid user_id FK, UK
         bigint balance
         bigint total_charged
         bigint total_used
