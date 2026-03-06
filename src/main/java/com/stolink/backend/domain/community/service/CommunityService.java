@@ -54,7 +54,7 @@ public class CommunityService {
 
         // 2. Work 조회 또는 생성 (동시성 제어 포함)
         AtomicBoolean workCreated = new AtomicBoolean(false);
-        Work work = getOrCreateWork(draft, userId, workCreated);
+        Work work = getOrCreateWork(draft, userId, workCreated, request.getWorkAccessType());
         log.info("[DEBUG][STEP 2] Work processed: workId={}, created={}", work.getId(), workCreated.get());
 
         // 3. 중복 게시 체크 (일괄 쿼리로 N+1 방지)
@@ -69,7 +69,8 @@ public class CommunityService {
         }
 
         // 4. Chapter 생성 및 JSONB 데이터 검증
-        Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle());
+        Chapter chapter = createChapter(work, draft, request.getChapterNumber(), request.getTitle(),
+                request.getIsFree(), request.getAccessType(), request.getPrice());
         if (chapter == null) {
             throw new RuntimeException("Chapter creation failed: null object returned.");
         }
@@ -144,12 +145,13 @@ public class CommunityService {
     /**
      * 작품 조회 또는 생성 (동시성 요청에 의한 중복 생성 방지)
      */
-    private Work getOrCreateWork(Draft draft, UUID userId, AtomicBoolean workCreated) {
+    private Work getOrCreateWork(Draft draft, UUID userId, AtomicBoolean workCreated,
+            com.stolink.backend.domain.chapter.entity.ChapterAccessType workAccessType) {
         return workRepository.findByProjectId(draft.getProjectId())
                 .orElseGet(() -> {
                     try {
                         workCreated.set(true);
-                        Work newWork = createWork(draft, userId);
+                        Work newWork = createWork(draft, userId, workAccessType);
                         return workRepository.save(newWork);
                     } catch (DataIntegrityViolationException e) {
                         // 동시에 여러 요청이 올 경우 Unique 제약 조건 위반 발생 가능 -> 재조회
@@ -163,12 +165,18 @@ public class CommunityService {
                 });
     }
 
-    private Work createWork(Draft draft, UUID userId) {
+    private Work createWork(Draft draft, UUID userId,
+            com.stolink.backend.domain.chapter.entity.ChapterAccessType workAccessType) {
         User author = userRepository.getReferenceById(userId);
         String title = draft.getWorkTitle() != null ? draft.getWorkTitle() : draft.getTitle();
         String synopsis = draft.getWorkSynopsis() != null ? draft.getWorkSynopsis() : "";
         Genre genre = Genre.from(draft.getWorkGenre());
         String coverUrl = draft.getWorkCoverUrl();
+
+        // 작품 유료/무료 설정
+        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = workAccessType != null ? workAccessType
+                : com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE;
+        Boolean isFree = (accessType == com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE);
 
         Work work = Work.builder()
                 .author(author)
@@ -177,13 +185,17 @@ public class CommunityService {
                 .genre(genre)
                 .coverImageUrl(coverUrl)
                 .projectId(draft.getProjectId())
+                .isFree(isFree)
+                .accessType(accessType)
                 .build();
 
         log.info("[CommunityService] Created new work object: projectId={}, title={}", draft.getProjectId(), title);
         return work;
     }
 
-    private Chapter createChapter(Work work, Draft draft, Integer requestedChapterNumber, String overrideTitle) {
+    private Chapter createChapter(Work work, Draft draft, Integer requestedChapterNumber, String overrideTitle,
+            Boolean isFreeReq, com.stolink.backend.domain.chapter.entity.ChapterAccessType accessTypeReq,
+            Integer priceReq) {
         int chapterNumber;
         if (requestedChapterNumber != null) {
             chapterNumber = requestedChapterNumber;
@@ -196,13 +208,36 @@ public class CommunityService {
                 ? overrideTitle
                 : draft.getTitle();
 
+        // 유료/무료 설정 처리 (ChapterService 로직과 동일하게 유지)
+        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = accessTypeReq;
+        Boolean isFree = isFreeReq;
+        Integer price = priceReq != null ? priceReq : 0;
+
+        if (accessType != null) {
+            isFree = (accessType == com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE);
+        } else if (isFree != null) {
+            accessType = isFree ? com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE
+                    : com.stolink.backend.domain.chapter.entity.ChapterAccessType.PAID;
+        } else {
+            isFree = (price <= 0);
+            accessType = isFree ? com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE
+                    : com.stolink.backend.domain.chapter.entity.ChapterAccessType.PAID;
+        }
+
+        if (!isFree && price <= 0) {
+            price = 10;
+        }
+
         // 병합 배포 여부에 따라 저장 필드 분기
         Chapter.ChapterBuilder builder = Chapter.builder()
                 .work(work)
                 .title(chapterTitle)
                 .content(draft.getContent())
                 .chapterNumber(chapterNumber)
-                .graphSnapshot(draft.getGraphSnapshot());
+                .graphSnapshot(draft.getGraphSnapshot())
+                .isFree(isFree)
+                .price(price)
+                .accessType(accessType);
 
         if (Boolean.TRUE.equals(draft.getIsMerged())) {
             // 시나리오 C: 병합 배포 → documentIds 배열에 저장
