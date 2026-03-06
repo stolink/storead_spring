@@ -179,7 +179,7 @@ jobs:
           JWT_COOKIE_DOMAIN=.${CLOUDFRONT_URL}
           TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
           TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY}
-          TOSS_TEST_MODE=${TOSS_TEST_MODE}
+          TOSS_TEST_MODE=${TOSS_TEST_MODE:-false}
           SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}"
 
           # docker-compose.yml 내용 읽기
