@@ -222,8 +222,25 @@ public class DiscoveryService {
                 .orElseThrow(() -> new ResourceNotFoundException("작품을 찾을 수 없습니다: " + workId));
 
         List<Chapter> chapters = chapterRepository.findByWorkIdOrderByChapterNumberAsc(workId);
+
+        // 사용자의 구매 이력 조회 (로그인한 경우)
+        Set<UUID> purchasedChapterIds = new HashSet<>();
+        if (userId != null) {
+            purchasedChapterIds = chapterPurchaseRepository.findAllByUserIdOrderByPurchasedAtDesc(userId)
+                    .stream()
+                    .map(com.stolink.backend.domain.chapter.entity.ChapterPurchase::getChapterId)
+                    .collect(Collectors.toSet());
+        }
+
+        final Set<UUID> finalPurchasedChapterIds = purchasedChapterIds;
         List<DiscoveryChapterResponse> chapterResponses = chapters.stream()
-                .map(DiscoveryChapterResponse::from)
+                .map(chapter -> {
+                    DiscoveryChapterResponse resp = DiscoveryChapterResponse.from(chapter);
+                    if (userId != null && finalPurchasedChapterIds.contains(chapter.getId())) {
+                        resp = resp.toBuilder().isPurchased(true).build();
+                    }
+                    return resp;
+                })
                 .collect(Collectors.toList());
 
         // 좋아요 수 조회
