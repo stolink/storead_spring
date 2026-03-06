@@ -82,7 +82,7 @@ public class PaymentService {
                 .build();
 
         try {
-            paymentRepository.save(payment);
+            paymentRepository.saveAndFlush(payment);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중이거나 중복된 결제 요청입니다.");
         }
