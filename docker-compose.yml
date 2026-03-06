@@ -29,6 +29,10 @@ services:
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_COOKIE_DOMAIN: ${JWT_COOKIE_DOMAIN:-localhost}
+      # Toss Payments
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY}
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY}
+      TOSS_TEST_MODE: ${TOSS_TEST_MODE}
     ports:
       - "8080:8080"
     volumes:
