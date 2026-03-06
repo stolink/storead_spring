@@ -60,7 +60,18 @@ public class Work extends BaseEntity {
     @Builder.Default
     private Double averageRating = 0.0;
 
-    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status) {
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isFree = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE;
+
+    public void update(String title, String synopsis, String coverImageUrl, Genre genre, WorkStatus status,
+            Boolean isFree,
+            com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType) {
         if (title != null)
             this.title = title;
         if (synopsis != null)
@@ -71,6 +82,10 @@ public class Work extends BaseEntity {
             this.genre = genre;
         if (status != null)
             this.status = status;
+        if (isFree != null)
+            this.isFree = isFree;
+        if (accessType != null)
+            this.accessType = accessType;
     }
 
     public void addRating(int score) {
