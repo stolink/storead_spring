@@ -43,8 +43,10 @@ public class ChapterService {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
 
+        // 작가 또는 관리자만 접근 가능 (에디터/관리용)
+        // 일반 독자는 DiscoveryService.getChapterDetail 사용
         if (!chapter.getWork().getAuthor().getId().equals(userId)) {
-            throw new AccessDeniedException("해당 챕터에 접근 권한이 없습니다");
+            throw new AccessDeniedException("해당 챕터에 접근 권한이 없습니다 (작가 전용)");
         }
 
         return ChapterDetailResponse.from(chapter);
@@ -70,16 +72,27 @@ public class ChapterService {
                     .orElse(0) + 1;
         }
 
-        // 유료/무료 설정 처리
-        Boolean isFree = request.getIsFree() != null ? request.getIsFree() : true;
+        // 유료/무료 설정 처리 (동기화 로직 포함)
         Integer price = request.getPrice() != null ? request.getPrice() : 0;
-        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = request.getAccessType() != null
-                ? request.getAccessType()
-                : com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE;
+        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = request.getAccessType();
+        Boolean isFree = request.getIsFree();
 
-        // 유료 챕터의 경우 가격이 0보다 커야 함
+        // accessType이 명시적으로 오면 우선순위
+        if (accessType != null) {
+            isFree = (accessType == com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE);
+        } else if (isFree != null) {
+            accessType = isFree ? com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE
+                    : com.stolink.backend.domain.chapter.entity.ChapterAccessType.PAID;
+        } else {
+            // 둘 다 없으면 기본값
+            isFree = (price <= 0);
+            accessType = isFree ? com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE
+                    : com.stolink.backend.domain.chapter.entity.ChapterAccessType.PAID;
+        }
+
+        // 유료 챕터의 경우 가격 보정
         if (!isFree && price <= 0) {
-            price = 10; // 기본 유료 가격: 10크레딧 (100원)
+            price = 10; // 기본 유료 가격: 10크레딧
         }
 
         Chapter chapter = Chapter.builder()
@@ -108,7 +121,7 @@ public class ChapterService {
         // 제목/내용 업데이트
         chapter.update(request.getTitle(), request.getContent());
 
-        // 유료/무료 설정 업데이트
+        // 유료/무료 설정 업데이트 (Entity 내부 동기화 로직 활용)
         if (request.getIsFree() != null || request.getPrice() != null || request.getAccessType() != null) {
             chapter.updatePricing(request.getIsFree(), request.getPrice(), request.getAccessType());
         }

@@ -86,14 +86,21 @@ public class Chapter extends BaseEntity {
     }
 
     public void updatePricing(Boolean isFree, Integer price, ChapterAccessType accessType) {
-        if (isFree != null) {
-            this.isFree = isFree;
-        }
-        if (price != null) {
-            this.price = price;
-        }
         if (accessType != null) {
             this.accessType = accessType;
+            this.isFree = (accessType == ChapterAccessType.FREE);
+        } else if (isFree != null) {
+            this.isFree = isFree;
+            this.accessType = isFree ? ChapterAccessType.FREE : ChapterAccessType.PAID;
+        }
+
+        if (price != null) {
+            this.price = price;
+            // 만약 가격이 0보다 큰데 무료로 설정되어 있다면 유료로 전환
+            if (this.price > 0 && Boolean.TRUE.equals(this.isFree)) {
+                this.isFree = false;
+                this.accessType = ChapterAccessType.PAID;
+            }
         }
     }
 

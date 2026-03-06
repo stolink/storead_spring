@@ -1,0 +1,12 @@
+891b9da docs(payment): 결제 동시성 테스트 결과 리포트 추가
+647661e test(payment): 결제 서비스 단위 테스트 보강 및 동시성/멱등성 통합 테스트 추가
+e02c13d feat(payment): 결제 멱등성(Idempotency) 처리 로직 추가 및 Toss API 클라이언트 개선
+ff4663f chore: 테스트 컨테이너(Testcontainers) 의존성 및 설정 추가
+34f08b9 docs(payment): update payment api guide and readme
+b11e121 docs(payment): add payment system improvement report
+f2d2c58 feat(security): update security config and exception handling
+cd22cab refactor(payment): optimize credit and payment service logic
+1cc7d3e feat(payment): enhance webhook handling accuracy
+ef59eb1 feat(payment): implement payment compensation scheduler and utilities
+f7f62d9 feat(payment): add payment compensation entities and repository
+21bab75 feat: replace '독자' with user nickname in gamification
