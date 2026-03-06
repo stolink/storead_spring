@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.hibernate.exception.SQLGrammarException;
+import org.springframework.jdbc.BadSqlGrammarException;
 
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -147,6 +149,42 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.PaymentNotCancelableException.class)
+        public ResponseEntity<ApiResponse<Void>> handlePaymentNotCancelable(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.PaymentNotCancelableException ex) {
+                log.error("Payment not cancelable: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.CONFLICT)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidCancelAmountException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInvalidCancelAmount(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidCancelAmountException ex) {
+                log.error("Invalid cancel amount: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidPaymentStateException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInvalidPaymentState(
+                        com.stolink.backend.domain.payment.exception.PaymentExceptions.InvalidPaymentStateException ex) {
+                log.error("Invalid payment state: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
                 log.error("Internal server error", ex);
@@ -275,6 +313,17 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.<Void>builder()
                                                 .status(HttpStatus.BAD_GATEWAY)
                                                 .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler({ SQLGrammarException.class, BadSqlGrammarException.class })
+        public ResponseEntity<ApiResponse<Void>> handleSqlGrammarException(Exception ex) {
+                log.error("SQL Grammar Exception: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .message("데이터베이스 처리 중 오류가 발생했습니다.")
                                                 .build());
         }
 }

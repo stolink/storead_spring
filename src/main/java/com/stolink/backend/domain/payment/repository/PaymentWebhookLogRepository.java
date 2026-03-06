@@ -11,5 +11,7 @@ public interface PaymentWebhookLogRepository extends JpaRepository<PaymentWebhoo
 
     boolean existsByPaymentKeyAndEventType(String paymentKey, String eventType);
 
+    boolean existsByPaymentKeyAndEventTypeAndStatusNot(String paymentKey, String eventType, WebhookStatus status);
+
     List<PaymentWebhookLog> findByStatusAndRetryCountLessThan(WebhookStatus status, Integer maxRetryCount);
 }

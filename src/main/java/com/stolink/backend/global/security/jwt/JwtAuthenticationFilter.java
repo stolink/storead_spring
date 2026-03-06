@@ -1,6 +1,5 @@
 package com.stolink.backend.global.security.jwt;
 
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,22 +63,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String resolveToken(HttpServletRequest request) {
         // 1. 쿠키에서 확인 (유효한 토큰 탐색)
         jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        String token = null;
+
         if (cookies != null) {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
                 if (ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
-                    String token = cookie.getValue();
-                    log.debug("Found access_token cookie: {}...", token.substring(0, Math.min(token.length(), 10)));
-                    
-                    try {
-                        if (jwtTokenProvider.validateToken(token)) {
-                            return token;
-                        } else {
-                            log.debug("Token validation failed for cookie");
-                        }
-                    } catch (Exception e) {
-                        log.debug("Token validation exception: {}", e.getMessage());
-                    }
+                    token = cookie.getValue();
+                    log.debug("Found access_token cookie from request.getCookies(): {}...",
+                            token.substring(0, Math.min(token.length(), 10)));
+                    break;
                 }
+            }
+        }
+
+        // 1-1. request.getCookies()가 null인 경우 Header에서 직접 추출 (일부 프록시/멀티파트 환경 대응)
+        if (token == null) {
+            String cookieHeader = request.getHeader("Cookie");
+            if (StringUtils.hasText(cookieHeader)) {
+                token = parseCookie(cookieHeader, ACCESS_TOKEN_COOKIE);
+                if (token != null) {
+                    log.debug("Found access_token cookie from Header: {}...",
+                            token.substring(0, Math.min(token.length(), 10)));
+                }
+            }
+        }
+
+        if (token != null) {
+            try {
+                if (jwtTokenProvider.validateToken(token)) {
+                    return token;
+                } else {
+                    log.debug("Token validation failed for cookie");
+                }
+            } catch (Exception e) {
+                log.debug("Token validation exception: {}", e.getMessage());
             }
         } else {
             log.debug("No cookies found in request");
@@ -93,6 +110,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         log.debug("No valid token resolved (Anonymous)");
+        return null;
+    }
+
+    /**
+     * Cookie 헤더 문자열에서 특정 쿠키 값을 추출
+     */
+    private String parseCookie(String cookieHeader, String cookieName) {
+        String[] cookies = cookieHeader.split(";");
+        for (String cookie : cookies) {
+            String[] pair = cookie.trim().split("=");
+            if (pair.length == 2 && pair[0].equals(cookieName)) {
+                return pair[1];
+            }
+        }
         return null;
     }
 }

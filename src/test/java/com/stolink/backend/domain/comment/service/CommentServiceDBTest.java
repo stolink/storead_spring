@@ -8,6 +8,7 @@ import com.stolink.backend.domain.comment.entity.Comment;
 import com.stolink.backend.domain.comment.repository.CommentRepository;
 import com.stolink.backend.domain.user.entity.User;
 import com.stolink.backend.domain.user.repository.UserRepository;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,61 +27,84 @@ import static org.assertj.core.api.Assertions.assertThat;
  * CI 환경(GitHub Actions)에서는 자동으로 건너뜁니다.
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("test-local")
+@Tag("IntegrationTest")
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true", disabledReason = "CI 환경에서는 PostgreSQL이 없으므로 건너뜀")
 public class CommentServiceDBTest {
 
-    @Autowired
-    private CommentService commentService;
+        @Autowired
+        private CommentService commentService;
 
-    @Autowired
-    private CommentRepository commentRepository;
+        @Autowired
+        private CommentRepository commentRepository;
 
-    @Autowired
-    private ChapterRepository chapterRepository;
+        @Autowired
+        private ChapterRepository chapterRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Test
-    @Transactional
-    void verifyParentIdPersistence() {
-        // 1. Setup: Get existing User and Chapter
-        User user = userRepository.findAll().stream().findFirst().orElseThrow();
-        Chapter chapter = chapterRepository.findAll().stream().findFirst().orElseThrow();
+        @Autowired
+        private com.stolink.backend.domain.work.repository.WorkRepository workRepository;
 
-        // 2. Create Parent Comment
-        Comment parent = Comment.builder()
-                .chapter(chapter)
-                .user(user)
-                .content("Parent Comment")
-                .relationId("test-relation")
-                .build();
-        parent = commentRepository.saveAndFlush(parent);
-        UUID parentId = parent.getId();
+        @Test
+        @Transactional
+        void verifyParentIdPersistence() {
+                // 1. Setup: Create and save User, Work, and Chapter
+                User user = User.builder()
+                                .email("test@example.com")
+                                .nickname("tester")
+                                .build();
+                user = userRepository.save(user);
 
-        // 3. Action: Create Reply via Service
-        // Record는 생성자에서 모든 필드를 받음 (content, relationId)
-        // Reply는 부모의 relationId를 상속받으므로 null로 전달하거나 "test-relation" 전달
-        CreateCommentRequest request = new CreateCommentRequest("Reply Content", null);
+                com.stolink.backend.domain.work.entity.Work work = com.stolink.backend.domain.work.entity.Work.builder()
+                                .author(user)
+                                .title("Test Work")
+                                .synopsis("Test Synopsis")
+                                .genre(com.stolink.backend.domain.work.entity.Genre.FANTASY)
+                                .build();
+                work = workRepository.save(work);
 
-        CommentResponse response = commentService.createReply(user.getId(), parentId, request);
-        // Record는 getter 대신 필드명() 메서드 사용
-        UUID replyId = response.id();
+                Chapter chapter = Chapter.builder()
+                                .work(work)
+                                .title("Test Chapter")
+                                .content("Chapter Content")
+                                .chapterNumber(1)
+                                .build();
+                chapter = chapterRepository.save(chapter);
 
-        // 4. Verification: Check the database directly (via Repository)
-        Comment savedReply = commentRepository.findById(replyId).orElseThrow();
+                // 2. Create Parent Comment
+                Comment parent = Comment.builder()
+                                .chapter(chapter)
+                                .user(user)
+                                .content("Parent Comment")
+                                .relationId("test-relation")
+                                .build();
+                parent = commentRepository.saveAndFlush(parent);
+                UUID parentId = parent.getId();
 
-        // 핵심 검증 1: parentId가 정확히 저장되었는가? (Threaded 구조의 핵심)
-        assertThat(savedReply.getParent()).isNotNull();
-        assertThat(savedReply.getParent().getId()).isEqualTo(parentId);
+                // 3. Action: Create Reply via Service
+                // Record는 생성자에서 모든 필드를 받음 (content, relationId)
+                // Reply는 부모의 relationId를 상속받으므로 null로 전달하거나 "test-relation" 전달
+                CreateCommentRequest request = new CreateCommentRequest("Reply Content", null);
 
-        // 핵심 검증 2: relationId가 부모로부터 상속되었는가? (관계도 필터링 유지)
-        assertThat(savedReply.getRelationId()).isEqualTo("test-relation");
+                CommentResponse response = commentService.createReply(user.getId(), parentId, request);
+                // Record는 getter 대신 필드명() 메서드 사용
+                UUID replyId = response.id();
 
-        System.out.println("=== DB Verification Successful ===");
-        System.out.println("Parent ID: " + parentId);
-        System.out.println("Reply ID: " + replyId);
-        System.out.println("Saved Parent ID in Reply: " + savedReply.getParent().getId());
-    }
+                // 4. Verification: Check the database directly (via Repository)
+                Comment savedReply = commentRepository.findById(replyId).orElseThrow();
+
+                // 핵심 검증 1: parentId가 정확히 저장되었는가? (Threaded 구조의 핵심)
+                assertThat(savedReply.getParent()).isNotNull();
+                assertThat(savedReply.getParent().getId()).isEqualTo(parentId);
+
+                // 핵심 검증 2: relationId가 부모로부터 상속되었는가? (관계도 필터링 유지)
+                assertThat(savedReply.getRelationId()).isEqualTo("test-relation");
+
+                System.out.println("=== DB Verification Successful ===");
+                System.out.println("Parent ID: " + parentId);
+                System.out.println("Reply ID: " + replyId);
+                System.out.println("Saved Parent ID in Reply: " + savedReply.getParent().getId());
+        }
 }

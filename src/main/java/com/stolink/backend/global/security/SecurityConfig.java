@@ -59,11 +59,15 @@ public class SecurityConfig {
                                                                 "/api/login/oauth2/**",
                                                                 "/api/v1/payments/packages",
                                                                 "/api/payments/packages",
+                                                                "/api/v1/webhooks/**",
                                                                 "/actuator/health",
                                                                 "/actuator/info",
+                                                                "/covers/**",
+                                                                "/uploads/**",
                                                                 "/error")
                                                 .permitAll()
                                                 // 그 외 모든 요청은 인증 필요
+                                                .requestMatchers("/api/upload/**").authenticated()
                                                 .anyRequest().authenticated())
 
                                 // OAuth2 로그인 설정

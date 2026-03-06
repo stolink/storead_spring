@@ -1,11 +1,11 @@
 package com.stolink.backend.domain.payment.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -36,12 +36,12 @@ public class PaymentWebhookLog {
     @Builder.Default
     private WebhookStatus status = WebhookStatus.RECEIVED;
 
-    @Type(JsonBinaryType.class)
-    @Column(name = "request_body", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "request_body", nullable = false)
     private JsonNode requestBody;
 
-    @Type(JsonBinaryType.class)
-    @Column(name = "response_body", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "response_body")
     private JsonNode responseBody;
 
     @Column(name = "error_message", length = 500)

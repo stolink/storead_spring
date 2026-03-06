@@ -15,6 +15,7 @@ import com.stolink.backend.domain.payment.exception.TossPaymentException;
 import com.stolink.backend.domain.payment.repository.CreditRepository;
 import com.stolink.backend.domain.payment.repository.CreditTransactionRepository;
 import com.stolink.backend.domain.payment.repository.PaymentRepository;
+import com.stolink.backend.domain.payment.repository.PaymentCompensationRepository;
 import com.stolink.backend.domain.payment.repository.PaymentWebhookLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
@@ -41,6 +43,7 @@ public class PaymentService {
     private final CreditRepository creditRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final PaymentWebhookLogRepository webhookLogRepository;
+    private final PaymentCompensationRepository compensationRepository;
     private final CreditPackageService creditPackageService;
     private final TransactionTemplate transactionTemplate;
     private final TossPaymentClient tossPaymentClient;
@@ -52,14 +55,19 @@ public class PaymentService {
      * 결제 준비 (주문 생성)
      */
     @Transactional
-    public PaymentPrepareResponse preparePayment(UUID userId, PaymentPrepareRequest request) {
+    public PaymentPrepareResponse preparePayment(UUID userId, PaymentPrepareRequest request,
+            String clientIdempotencyKey) {
         CreditPackage creditPackage = creditPackageService.getPackage(request.packageId());
 
         String orderId = generateOrderId();
-        String idempotencyKey = generateIdempotencyKey(userId, orderId);
+
+        // 클라이언트가 명시적으로 멱등키를 제공한 경우 우선 사용, 없으면 자동 생성 후 할당
+        String idempotencyKey = (clientIdempotencyKey != null && !clientIdempotencyKey.isBlank())
+                ? "IDEM-" + clientIdempotencyKey
+                : generateIdempotencyKey(userId, orderId);
 
         if (paymentRepository.existsByIdempotencyKey(idempotencyKey)) {
-            throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중인 결제가 있습니다.");
+            throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중이거나 중복된 결제 요청입니다.");
         }
 
         Payment payment = Payment.builder()
@@ -129,7 +137,9 @@ public class PaymentService {
             tossResponse = tossPaymentClient.confirmPayment(
                     request.paymentKey(),
                     request.orderId(),
-                    request.amount());
+                    request.amount(),
+                    request.orderId() // 멱등키로 고유한 주문 번호(orderId) 사용
+            );
         } catch (TossPaymentException e) {
             // 3. (TX2-Fail) 실패 처리
             transactionTemplate.executeWithoutResult(status -> {
@@ -240,41 +250,76 @@ public class PaymentService {
 
         // 2. (Non-TX) 토스 API 호출
         try {
+            // 결제 고유 ID와 취소 금액을 묶어서 취소 요청별 고유한 멱등키 생성
+            String cancelIdempotencyKey = UUID.nameUUIDFromBytes(
+                    (ctx.payment().getId().toString() + "_" + ctx.cancelAmount()).getBytes()).toString();
+
             tossPaymentClient.cancelPayment(
                     ctx.payment().getPaymentKey(),
                     request.cancelReason(),
-                    ctx.cancelAmount());
+                    ctx.cancelAmount(),
+                    cancelIdempotencyKey);
         } catch (TossPaymentException e) {
             log.error("토스 결제 취소 실패: paymentKey={}, error={}", ctx.payment().getPaymentKey(), e.getMessage());
             throw e;
         }
 
         // 3. (TX2) 성공 결과 반영 및 크레딧 차감
-        return transactionTemplate.execute(status -> {
-            Payment p = paymentRepository.findByIdWithLock(ctx.payment().getId()).orElseThrow();
-            Credit c = creditRepository.findByUserIdWithLock(userId).orElseThrow();
+        try {
+            return transactionTemplate.execute(status -> {
+                Payment p = paymentRepository.findByIdWithLock(ctx.payment().getId()).orElseThrow();
+                Credit c = creditRepository.findByUserIdWithLock(userId).orElseThrow();
 
-            p.cancel(ctx.cancelAmount(), request.cancelReason());
-            paymentRepository.save(p);
+                p.cancel(ctx.cancelAmount(), request.cancelReason());
+                paymentRepository.save(p);
 
-            Long balanceBefore = c.getBalance();
-            c.cancelCharge(ctx.creditToDeduct());
-            creditRepository.save(c);
+                Long balanceBefore = c.getBalance();
+                c.cancelCharge(ctx.creditToDeduct());
+                creditRepository.save(c);
 
-            CreditTransaction transaction = CreditTransaction.createRefundTransaction(
-                    userId,
-                    c.getId(),
-                    p.getId(),
-                    ctx.creditToDeduct(),
-                    balanceBefore,
-                    String.format("%s 결제 취소", p.getOrderName()));
-            creditTransactionRepository.save(transaction);
+                CreditTransaction transaction = CreditTransaction.createRefundTransaction(
+                        userId,
+                        c.getId(),
+                        p.getId(),
+                        ctx.creditToDeduct(),
+                        balanceBefore,
+                        String.format("%s 결제 취소", p.getOrderName()));
+                creditTransactionRepository.save(transaction);
 
-            log.info("결제 취소 처리 완료: orderId={}, cancelAmount={}, creditDeducted={}",
-                    p.getOrderId(), ctx.cancelAmount(), ctx.creditToDeduct());
+                log.info("결제 취소 처리 완료: orderId={}, cancelAmount={}, creditDeducted={}",
+                        p.getOrderId(), ctx.cancelAmount(), ctx.creditToDeduct());
 
-            return PaymentResponse.from(p);
-        });
+                return PaymentResponse.from(p);
+            });
+        } catch (Exception e) {
+            // TX2 실패: PG 환불은 성공했으나 내부 처리 실패 → 보상 트랜잭션 기록
+            log.error("결제 취소 내부 처리 실패 (PG 환불 완료 상태): paymentId={}, error={}",
+                    paymentId, e.getMessage());
+
+            transactionTemplate.executeWithoutResult(status -> {
+                // Payment 상태에 실패 사유 기록
+                Payment p = paymentRepository.findByIdWithLock(ctx.payment().getId()).orElse(null);
+                if (p != null) {
+                    p.fail("CANCEL_INTERNAL_ERROR", "PG 환불 성공, 내부 크레딧 차감 실패: " + e.getMessage());
+                    paymentRepository.save(p);
+                }
+
+                // 보상 트랜잭션 레코드 생성
+                PaymentCompensation compensation = PaymentCompensation.builder()
+                        .paymentId(ctx.payment().getId())
+                        .userId(userId)
+                        .type(CompensationType.CANCEL_CREDIT_DEDUCTION)
+                        .status(CompensationStatus.PENDING)
+                        .creditAmount(ctx.creditToDeduct())
+                        .errorMessage(e.getMessage())
+                        .build();
+                compensationRepository.save(compensation);
+            });
+
+            // 결제 현재 상태를 반환 (사용자에게 환불은 진행 중임을 알림)
+            Payment current = paymentRepository.findById(ctx.payment().getId()).orElseThrow();
+            return PaymentResponse.from(current);
+        }
     }
 
     /**
@@ -306,40 +351,54 @@ public class PaymentService {
     }
 
     /**
-     * 웹훅 처리
+     * 웹훅 처리 (트랜잭션 분리: 로그 생성 / 비즈니스 처리 / 상태 업데이트)
+     * 예외를 던지지 않음 → 토스에 항상 200 반환, 실패 시 스케줄러가 재처리
      */
-    @Transactional
     public void handleWebhook(String eventType, JsonNode payload) {
         String paymentKey = payload.path("paymentKey").asText();
         String orderId = payload.path("orderId").asText();
 
         log.info("웹훅 수신: eventType={}, paymentKey={}", eventType, paymentKey);
 
-        if (webhookLogRepository.existsByPaymentKeyAndEventType(paymentKey, eventType)) {
+        // 중복 검사: FAILED가 아닌 로그가 있으면 이미 처리 완료 (FAILED는 재시도 허용)
+        if (webhookLogRepository.existsByPaymentKeyAndEventTypeAndStatusNot(
+                paymentKey, eventType, WebhookStatus.FAILED)) {
             log.info("중복 웹훅 무시: paymentKey={}, eventType={}", paymentKey, eventType);
             return;
         }
 
-        PaymentWebhookLog webhookLog = PaymentWebhookLog.builder()
-                .eventType(eventType)
-                .paymentKey(paymentKey)
-                .orderId(orderId)
-                .requestBody(payload)
-                .status(WebhookStatus.RECEIVED)
-                .build();
-        webhookLogRepository.save(webhookLog);
+        // TX1: 로그 생성
+        PaymentWebhookLog webhookLog = transactionTemplate.execute(status -> {
+            PaymentWebhookLog newLog = PaymentWebhookLog.builder()
+                    .eventType(eventType)
+                    .paymentKey(paymentKey)
+                    .orderId(orderId)
+                    .requestBody(payload)
+                    .status(WebhookStatus.RECEIVED)
+                    .build();
+            return webhookLogRepository.save(newLog);
+        });
 
+        // TX2: 비즈니스 로직 처리
         try {
             if ("PAYMENT_STATUS_CHANGED".equals(eventType)) {
                 handlePaymentStatusChanged(payload);
             }
-            webhookLog.markAsProcessed();
+
+            // TX3: 성공 상태 업데이트
+            transactionTemplate.executeWithoutResult(status -> {
+                webhookLog.markAsProcessed();
+                webhookLogRepository.save(webhookLog);
+            });
         } catch (Exception e) {
             log.error("웹훅 처리 실패: eventType={}, error={}", eventType, e.getMessage());
-            webhookLog.markAsFailed(e.getMessage());
-            throw e;
-        } finally {
-            webhookLogRepository.save(webhookLog);
+
+            // TX3-fail: 실패 상태 업데이트 (별도 트랜잭션이므로 롤백되지 않음)
+            transactionTemplate.executeWithoutResult(status -> {
+                webhookLog.markAsFailed(e.getMessage());
+                webhookLogRepository.save(webhookLog);
+            });
+            // 예외를 다시 던지지 않음 → 토스에 200 반환
         }
     }
 
@@ -363,7 +422,16 @@ public class PaymentService {
 
     private Credit getOrCreateCredit(UUID userId) {
         return creditRepository.findByUserIdWithLock(userId)
-                .orElseGet(() -> creditRepository.save(Credit.createForUser(userId)));
+                .orElseGet(() -> {
+                    try {
+                        return creditRepository.save(Credit.createForUser(userId));
+                    } catch (DataIntegrityViolationException e) {
+                        // Race condition: 다른 트랜잭션이 먼저 INSERT → 재조회
+                        return creditRepository.findByUserIdWithLock(userId)
+                                .orElseThrow(() -> new PaymentExceptions.CreditNotFoundException(
+                                        "크레딧 생성 중 오류가 발생했습니다."));
+                    }
+                });
     }
 
     private String generateOrderId() {

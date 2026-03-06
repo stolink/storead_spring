@@ -39,25 +39,26 @@ public class DiscoveryChapterDetailResponse {
             long likeCount,
             boolean likedByMe,
             UUID prevChapterId,
-            UUID nextChapterId) {
+            UUID nextChapterId,
+            boolean hasAccess) {
         return DiscoveryChapterDetailResponse.builder()
                 .id(chapter.getId())
                 .workId(chapter.getWork().getId())
                 .workTitle(chapter.getWork().getTitle())
                 .title(chapter.getTitle())
-                .content(chapter.getContent())
+                .content(hasAccess ? chapter.getContent() : "")
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
                 .likeCount(likeCount)
                 .likedByMe(likedByMe)
                 .prevChapterId(prevChapterId)
                 .nextChapterId(nextChapterId)
-                .graphSnapshot(chapter.getGraphSnapshot())
+                .graphSnapshot(hasAccess ? chapter.getGraphSnapshot() : null)
                 .createdAt(chapter.getCreatedAt())
                 .isFree(chapter.getIsFree())
                 .price(chapter.getPrice())
                 .accessType(chapter.getAccessType())
-                .hasAccess(chapter.getIsFree()) // 기본적으로 무료면 열람 가능
+                .hasAccess(hasAccess)
                 .build();
     }
 }
