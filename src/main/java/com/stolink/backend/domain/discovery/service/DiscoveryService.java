@@ -257,22 +257,26 @@ public class DiscoveryService {
         UUID prevChapterId = chapterRepository.findPrevChapterId(workId, currentNumber).orElse(null);
         UUID nextChapterId = chapterRepository.findNextChapterId(workId, currentNumber).orElse(null);
 
-        DiscoveryChapterDetailResponse response = DiscoveryChapterDetailResponse.from(chapter, likeCount, likedByMe,
-                prevChapterId, nextChapterId);
+        // 유료 챕터 접근 제어
+        boolean isPaidChapter = !Boolean.TRUE.equals(chapter.getIsFree());
+        boolean isPurchased = false;
+        boolean hasAccess = !isPaidChapter; // 무료면 접근 가능
 
-        // hasAccess 정합성 개선: 유료 챕터의 경우 실제 구매 여부 확인
-        if (!Boolean.TRUE.equals(chapter.getIsFree()) && userId != null) {
-            boolean isPurchased = chapterPurchaseRepository.existsByUserIdAndChapterId(userId, chapterId);
+        if (isPaidChapter && userId != null) {
+            // 작가 본인이면 접근 허용
+            boolean isAuthor = chapter.getWork().getAuthor().getId().equals(userId);
+            isPurchased = chapterPurchaseRepository.existsByUserIdAndChapterId(userId, chapterId);
+            hasAccess = isAuthor || isPurchased;
+        }
 
-            // 유료이면서 구매했다면 열람 가능 (hasAccess = true)
-            // 유료이면서 구매 안했으면 열람 불가 (hasAccess = false) - from 메서드에서 이미 false로 설정되어 있을
-            // 것임(isFree가 false이므로)
-            if (isPurchased) {
-                response = response.toBuilder()
-                        .isPurchased(true)
-                        .hasAccess(true)
-                        .build();
-            }
+        DiscoveryChapterDetailResponse response = DiscoveryChapterDetailResponse.from(
+                chapter, likeCount, likedByMe, prevChapterId, nextChapterId, hasAccess);
+
+        if (isPaidChapter) {
+            response = response.toBuilder()
+                    .isPurchased(isPurchased)
+                    .hasAccess(hasAccess)
+                    .build();
         }
 
         return response;
