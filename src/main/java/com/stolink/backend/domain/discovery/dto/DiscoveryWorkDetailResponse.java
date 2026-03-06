@@ -30,6 +30,10 @@ public class DiscoveryWorkDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
+
     // 좋아요 및 서재 관련 필드 (사용자별 상태)
     private Long likeCount; // 총 좋아요 수
     private Boolean isLiked; // 현재 사용자가 좋아요 했는지 (비로그인: null)
@@ -53,6 +57,8 @@ public class DiscoveryWorkDetailResponse {
                 .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
+                .isFree(work.getIsFree())
+                .accessType(work.getAccessType())
                 .likeCount(likeCount)
                 .isLiked(isLiked)
                 .isInLibrary(isInLibrary)

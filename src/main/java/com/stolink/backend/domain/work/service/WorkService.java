@@ -47,6 +47,20 @@ public class WorkService {
         User author = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId));
 
+        // 유료/무료 설정 처리
+        Boolean isFree = request.getIsFree();
+        com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = request.getAccessType();
+
+        if (accessType != null) {
+            isFree = (accessType == com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE);
+        } else if (isFree != null) {
+            accessType = isFree ? com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE
+                    : com.stolink.backend.domain.chapter.entity.ChapterAccessType.PAID;
+        } else {
+            isFree = true;
+            accessType = com.stolink.backend.domain.chapter.entity.ChapterAccessType.FREE;
+        }
+
         Work work = Work.builder()
                 .author(author)
                 .title(request.getTitle())
@@ -54,7 +68,9 @@ public class WorkService {
                 .coverImageUrl(request.getCoverImageUrl())
                 .genre(request.getGenre())
                 .status(request.getStatus() != null ? request.getStatus() : WorkStatus.ONGOING)
-                .projectId(request.getProjectId()) // stolink 프로젝트 연동
+                .projectId(request.getProjectId())
+                .isFree(isFree)
+                .accessType(accessType)
                 .build();
 
         Work saved = workRepository.save(work);
@@ -71,7 +87,9 @@ public class WorkService {
                 request.getSynopsis(),
                 request.getCoverImageUrl(),
                 request.getGenre(),
-                request.getStatus());
+                request.getStatus(),
+                request.getIsFree(),
+                request.getAccessType());
 
         int chapterCount = chapterRepository.countByWorkId(workId);
         return WorkResponse.from(work, chapterCount);

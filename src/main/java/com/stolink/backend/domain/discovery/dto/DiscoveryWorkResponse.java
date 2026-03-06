@@ -27,6 +27,10 @@ public class DiscoveryWorkResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
+
     public static DiscoveryWorkResponse from(Work work, int chapterCount, long likeCount) {
         return DiscoveryWorkResponse.builder()
                 .id(work.getId())
@@ -42,6 +46,8 @@ public class DiscoveryWorkResponse {
                 .likeCount(likeCount)
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
+                .isFree(work.getIsFree())
+                .accessType(work.getAccessType())
                 .build();
     }
 

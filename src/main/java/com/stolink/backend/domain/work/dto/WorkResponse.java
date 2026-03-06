@@ -27,6 +27,10 @@ public class WorkResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
+
     public static WorkResponse from(Work work) {
         return WorkResponse.builder()
                 .id(work.getId())
@@ -43,6 +47,8 @@ public class WorkResponse {
                 .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
+                .isFree(work.getIsFree())
+                .accessType(work.getAccessType())
                 .build();
     }
 
@@ -62,6 +68,8 @@ public class WorkResponse {
                 .ratingCount(work.getRatingCount())
                 .createdAt(work.getCreatedAt())
                 .updatedAt(work.getUpdatedAt())
+                .isFree(work.getIsFree())
+                .accessType(work.getAccessType())
                 .build();
     }
 }
