@@ -81,7 +81,11 @@ public class PaymentService {
                 .expiredAt(LocalDateTime.now().plusMinutes(30))
                 .build();
 
-        paymentRepository.save(payment);
+        try {
+            paymentRepository.save(payment);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new PaymentExceptions.DuplicatePaymentException("이미 처리 중이거나 중복된 결제 요청입니다.");
+        }
         log.info("결제 준비 완료: orderId={}, userId={}, amount={}",
                 orderId, userId, creditPackage.getPrice());
 
