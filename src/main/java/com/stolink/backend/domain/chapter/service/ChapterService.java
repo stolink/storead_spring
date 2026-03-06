@@ -73,6 +73,9 @@ public class ChapterService {
         }
 
         // 유료/무료 설정 처리 (동기화 로직 포함)
+        log.info("[ChapterService] createChapter request: isFree={}, price={}, accessType={}",
+                request.getIsFree(), request.getPrice(), request.getAccessType());
+
         Integer price = request.getPrice() != null ? request.getPrice() : 0;
         com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType = request.getAccessType();
         Boolean isFree = request.getIsFree();
@@ -95,6 +98,8 @@ public class ChapterService {
             price = 10; // 기본 유료 가격: 10크레딧
         }
 
+        log.info("[ChapterService] Final pricing: isFree={}, price={}, accessType={}", isFree, price, accessType);
+
         Chapter chapter = Chapter.builder()
                 .work(work)
                 .title(request.getTitle())
@@ -111,6 +116,9 @@ public class ChapterService {
 
     @Transactional
     public ChapterDetailResponse updateChapter(UUID userId, UUID chapterId, UpdateChapterRequest request) {
+        log.info("[ChapterService] updateChapter request: id={}, isFree={}, price={}, accessType={}",
+                chapterId, request.getIsFree(), request.getPrice(), request.getAccessType());
+
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("챕터를 찾을 수 없습니다: " + chapterId));
 
@@ -125,6 +133,9 @@ public class ChapterService {
         if (request.getIsFree() != null || request.getPrice() != null || request.getAccessType() != null) {
             chapter.updatePricing(request.getIsFree(), request.getPrice(), request.getAccessType());
         }
+
+        log.info("[ChapterService] Updated pricing in DB: isFree={}, price={}, accessType={}",
+                chapter.getIsFree(), chapter.getPrice(), chapter.getAccessType());
 
         return ChapterDetailResponse.from(chapter);
     }
