@@ -87,7 +87,7 @@ class PaymentServiceTest {
 
                 assertThat(response.orderId()).isNotNull();
                 assertThat(response.amount()).isEqualTo(1000L);
-                verify(paymentRepository).save(any(Payment.class));
+                verify(paymentRepository).saveAndFlush(any(Payment.class));
         }
 
         @Test
@@ -105,7 +105,7 @@ class PaymentServiceTest {
                                 .isInstanceOf(PaymentExceptions.DuplicatePaymentException.class);
 
                 // 중복 시 저장하지 않아야 함
-                verify(paymentRepository, never()).save(any(Payment.class));
+                verify(paymentRepository, never()).saveAndFlush(any(Payment.class));
         }
 
         @Test
@@ -122,7 +122,7 @@ class PaymentServiceTest {
 
                 // orderId가 있으면 서버 키가 자동 생성된 것
                 assertThat(response.orderId()).isNotNull();
-                verify(paymentRepository).save(any(Payment.class));
+                verify(paymentRepository).saveAndFlush(any(Payment.class));
         }
 
         // ===================== confirmPayment =====================
