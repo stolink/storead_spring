@@ -146,6 +146,9 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
+          TOSS_CLIENT_KEY: ${{ secrets.TOSS_CLIENT_KEY }}
+          TOSS_TEST_MODE: ${{ vars.TOSS_TEST_MODE }}
           # ECR 이미지 정보
           AWS_ACCOUNT_ID: ${{ needs.build-and-push.outputs.account-id }}
           # 브랜치에 따라 프로파일 및 이미지 태그 결정 (SSM 배포용)
@@ -174,6 +177,9 @@ jobs:
           GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
           JWT_SECRET=${JWT_SECRET}
           JWT_COOKIE_DOMAIN=.${CLOUDFRONT_URL}
+          TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
+          TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY}
+          TOSS_TEST_MODE=${TOSS_TEST_MODE}
           SPRING_PROFILES_ACTIVE=${SPRING_PROFILE}"
 
           # docker-compose.yml 내용 읽기
@@ -252,7 +258,7 @@ jobs:
               cat /tmp/health_response.txt
               exit 0
             fi
-            
+
             echo "❌ Attempt $i failed with HTTP code: $HTTP_CODE"
             echo "Response body:"
             cat /tmp/health_response.txt 2>/dev/null || echo "(no response body)"
