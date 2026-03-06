@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @org.testcontainers.junit.jupiter.Testcontainers
+@org.springframework.test.context.ActiveProfiles("test")
 @EnabledIf("dockerAvailable")
 class CreditConcurrencyTest {
 
@@ -42,6 +43,8 @@ class CreditConcurrencyTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
     }
 
     @Autowired
