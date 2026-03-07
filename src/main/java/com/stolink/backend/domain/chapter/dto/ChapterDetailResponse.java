@@ -22,17 +22,33 @@ public class ChapterDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 유료/무료 관련 필드 (DiscoveryChapterDetailResponse와 통일)
+    private Boolean isFree;
+    private Integer price;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
+    private Boolean isPurchased;
+    private Boolean hasAccess;
+
     public static ChapterDetailResponse from(Chapter chapter) {
+        return from(chapter, false, true); // 기본적으로 접근 가능하다고 가정 (작가용)
+    }
+
+    public static ChapterDetailResponse from(Chapter chapter, boolean isPurchased, boolean hasAccess) {
         return ChapterDetailResponse.builder()
                 .id(chapter.getId())
                 .workId(chapter.getWork().getId())
                 .title(chapter.getTitle())
-                .content(chapter.getContent())
+                .content(hasAccess ? chapter.getContent() : "")
                 .chapterNumber(chapter.getChapterNumber())
                 .viewCount(chapter.getViewCount())
-                .graphSnapshot(chapter.getGraphSnapshot())
+                .graphSnapshot(hasAccess ? chapter.getGraphSnapshot() : null)
                 .createdAt(chapter.getCreatedAt())
                 .updatedAt(chapter.getUpdatedAt())
+                .isFree(chapter.getIsFree())
+                .price(chapter.getPrice())
+                .accessType(chapter.getAccessType())
+                .isPurchased(isPurchased)
+                .hasAccess(hasAccess)
                 .build();
     }
 }

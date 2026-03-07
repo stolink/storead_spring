@@ -308,10 +308,16 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ApiResponse<Void>> handleTossPaymentException(
                         com.stolink.backend.domain.payment.exception.TossPaymentException ex) {
                 log.error("Toss payment error: code={}, message={}", ex.getErrorCode(), ex.getMessage());
+
+                HttpStatus status = HttpStatus.resolve(ex.getStatusCode());
+                if (status == null) {
+                        status = HttpStatus.BAD_GATEWAY;
+                }
+
                 return ResponseEntity
-                                .status(HttpStatus.BAD_GATEWAY)
+                                .status(status)
                                 .body(ApiResponse.<Void>builder()
-                                                .status(HttpStatus.BAD_GATEWAY)
+                                                .status(status)
                                                 .message(ex.getMessage())
                                                 .build());
         }

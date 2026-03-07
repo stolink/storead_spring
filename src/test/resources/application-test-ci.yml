@@ -2,16 +2,21 @@ spring:
   datasource:
     # Testcontainers가 동적으로 URL을 주입하므로 드라이버만 설정하거나 비워둠
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create
     show-sql: false
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: "0"
 
 toss:
   payments:
