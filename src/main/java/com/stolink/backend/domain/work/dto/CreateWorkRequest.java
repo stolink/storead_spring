@@ -27,4 +27,8 @@ public class CreateWorkRequest {
 
     // stolink 프로젝트 연동용 (optional - storead 자체 생성 시 null 허용)
     private String projectId;
+
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
 }

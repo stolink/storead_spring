@@ -13,4 +13,8 @@ public class UpdateWorkRequest {
     private Genre genre;
     private com.stolink.backend.domain.work.entity.WorkStatus status;
     private java.util.Map<String, Object> characterGraphData;
+
+    // 유료/무료 관련 필드
+    private Boolean isFree;
+    private com.stolink.backend.domain.chapter.entity.ChapterAccessType accessType;
 }
