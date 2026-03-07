@@ -21,6 +21,7 @@ public class GamificationService {
     private final UserGamificationRepository gamificationRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     public GamificationResponse getMyGamification(UUID userId) {
         UserGamification gamification = getOrCreateGamification(userId);
         return GamificationResponse.from(gamification);
