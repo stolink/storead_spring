@@ -7,6 +7,7 @@ import com.stolink.backend.domain.payment.repository.PaymentRepository;
 import com.stolink.backend.domain.payment.service.PaymentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @ActiveProfiles("test")
 @EnabledIf("dockerAvailable")
+@Tag("IntegrationTest")
 class PaymentIdempotencyIntegrationTest {
 
     static boolean dockerAvailable() {

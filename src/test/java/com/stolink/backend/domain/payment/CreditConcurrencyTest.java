@@ -5,6 +5,7 @@ import com.stolink.backend.domain.payment.entity.Credit;
 import com.stolink.backend.domain.payment.repository.CreditRepository;
 import com.stolink.backend.domain.payment.service.CreditService;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @org.testcontainers.junit.jupiter.Testcontainers
 @org.springframework.test.context.ActiveProfiles("test")
 @EnabledIf("dockerAvailable")
+@Tag("IntegrationTest")
 class CreditConcurrencyTest {
 
     static boolean dockerAvailable() {
