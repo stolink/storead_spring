@@ -322,6 +322,66 @@ public class GlobalExceptionHandler {
                                                 .build());
         }
 
+        @ExceptionHandler(com.stolink.backend.domain.settlement.exception.SettlementExceptions.SettlementNotFoundException.class)
+        public ResponseEntity<ApiResponse<Void>> handleSettlementNotFound(
+                        com.stolink.backend.domain.settlement.exception.SettlementExceptions.SettlementNotFoundException ex) {
+                log.error("Settlement not found: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.NOT_FOUND)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.settlement.exception.SettlementExceptions.DuplicateSettlementException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDuplicateSettlement(
+                        com.stolink.backend.domain.settlement.exception.SettlementExceptions.DuplicateSettlementException ex) {
+                log.error("Duplicate settlement: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.CONFLICT)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.settlement.exception.SettlementExceptions.InvalidSettlementStatusException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInvalidSettlementStatus(
+                        com.stolink.backend.domain.settlement.exception.SettlementExceptions.InvalidSettlementStatusException ex) {
+                log.error("Invalid settlement status: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.BAD_REQUEST)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.settlement.exception.SettlementExceptions.InsufficientRevenueException.class)
+        public ResponseEntity<ApiResponse<Void>> handleInsufficientRevenue(
+                        com.stolink.backend.domain.settlement.exception.SettlementExceptions.InsufficientRevenueException ex) {
+                log.error("Insufficient revenue: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(com.stolink.backend.domain.settlement.exception.SettlementExceptions.DuplicateRevenueException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDuplicateRevenue(
+                        com.stolink.backend.domain.settlement.exception.SettlementExceptions.DuplicateRevenueException ex) {
+                log.error("Duplicate revenue: {}", ex.getMessage());
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.<Void>builder()
+                                                .status(HttpStatus.CONFLICT)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
         @ExceptionHandler({ SQLGrammarException.class, BadSqlGrammarException.class })
         public ResponseEntity<ApiResponse<Void>> handleSqlGrammarException(Exception ex) {
                 log.error("SQL Grammar Exception: {}", ex.getMessage());
