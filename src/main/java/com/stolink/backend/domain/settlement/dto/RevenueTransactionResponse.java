@@ -12,10 +12,10 @@ public record RevenueTransactionResponse(
         UUID chapterId,
         UUID buyerUserId,
         RevenueTransactionType type,
-        Integer creditAmount,
+        Long creditAmount,
         Double platformFeeRate,
-        Integer platformFee,
-        Integer authorShare,
+        Long platformFee,
+        Long authorShare,
         UUID settlementId,
         LocalDateTime createdAt
 ) {

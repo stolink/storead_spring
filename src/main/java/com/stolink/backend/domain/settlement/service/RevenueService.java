@@ -72,7 +72,7 @@ public class RevenueService {
 
         // AuthorRevenue 갱신
         AuthorRevenue revenue = getOrCreateAuthorRevenue(authorId);
-        revenue.addEarning((long) tx.getAuthorShare());
+        revenue.addEarning(tx.getAuthorShare());
 
         try {
             revenueTransactionRepository.save(tx);
@@ -118,7 +118,7 @@ public class RevenueService {
         AuthorRevenue revenue = authorRevenueRepository.findByAuthorIdWithLock(authorId)
                 .orElseThrow(() -> new IllegalStateException("환불 대상 작가의 수익 정보가 없습니다."));
 
-        revenue.deductEarning((long) Math.abs(tx.getAuthorShare()));
+        revenue.deductEarning(Math.abs(tx.getAuthorShare()));
         revenueTransactionRepository.save(tx);
 
         log.info("환불 수익 차감: authorId={}, chapterId={}, deducted={}",

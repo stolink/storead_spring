@@ -105,13 +105,8 @@ public class ChapterPurchaseService {
                 chapterId.toString());
         creditService.useCredit(userId, useRequest);
 
-        // 5. 작가 수익 기록
-        try {
-            revenueService.recordChapterSaleRevenue(purchase);
-        } catch (Exception e) {
-            log.warn("수익 기록 실패 (구매는 정상 처리됨): purchaseId={}, error={}",
-                    purchase.getId(), e.getMessage());
-        }
+        // 5. 작가 수익 기록 (실패 시 전체 트랜잭션 롤백)
+        revenueService.recordChapterSaleRevenue(purchase);
     }
 
     /**

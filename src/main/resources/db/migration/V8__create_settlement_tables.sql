@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS revenue_transactions (
     buyer_user_id UUID NOT NULL,
     purchase_id UUID NOT NULL,
     type VARCHAR(30) NOT NULL,
-    credit_amount INTEGER NOT NULL,
+    credit_amount BIGINT NOT NULL,
     platform_fee_rate DOUBLE PRECISION NOT NULL,
-    platform_fee INTEGER NOT NULL,
-    author_share INTEGER NOT NULL,
+    platform_fee BIGINT NOT NULL,
+    author_share BIGINT NOT NULL,
     settlement_id UUID,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -89,10 +89,10 @@ class SettlementServiceTest {
                     .buyerUserId(UUID.randomUUID())
                     .purchaseId(UUID.randomUUID())
                     .type(RevenueTransactionType.CHAPTER_SALE)
-                    .creditAmount(100)
+                    .creditAmount(100L)
                     .platformFeeRate(0.3)
-                    .platformFee(30)
-                    .authorShare(70)
+                    .platformFee(30L)
+                    .authorShare(70L)
                     .build();
             RevenueTransaction tx2 = RevenueTransaction.builder()
                     .authorId(authorId)
@@ -101,10 +101,10 @@ class SettlementServiceTest {
                     .buyerUserId(UUID.randomUUID())
                     .purchaseId(UUID.randomUUID())
                     .type(RevenueTransactionType.CHAPTER_SALE)
-                    .creditAmount(200)
+                    .creditAmount(200L)
                     .platformFeeRate(0.3)
-                    .platformFee(60)
-                    .authorShare(140)
+                    .platformFee(60L)
+                    .authorShare(140L)
                     .build();
 
             given(revenueTransactionRepository.findUnsettledByAuthorIdAndPeriod(
@@ -191,10 +191,10 @@ class SettlementServiceTest {
                     .buyerUserId(UUID.randomUUID())
                     .purchaseId(UUID.randomUUID())
                     .type(RevenueTransactionType.CHAPTER_SALE)
-                    .creditAmount(50)
+                    .creditAmount(50L)
                     .platformFeeRate(0.3)
-                    .platformFee(15)
-                    .authorShare(35)
+                    .platformFee(15L)
+                    .authorShare(35L)
                     .build();
 
             given(revenueTransactionRepository.findUnsettledByAuthorIdAndPeriod(

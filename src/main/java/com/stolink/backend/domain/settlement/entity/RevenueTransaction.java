@@ -46,16 +46,16 @@ public class RevenueTransaction {
     private RevenueTransactionType type;
 
     @Column(name = "credit_amount", nullable = false)
-    private Integer creditAmount;
+    private Long creditAmount;
 
     @Column(name = "platform_fee_rate", nullable = false)
     private Double platformFeeRate;
 
     @Column(name = "platform_fee", nullable = false)
-    private Integer platformFee;
+    private Long platformFee;
 
     @Column(name = "author_share", nullable = false)
-    private Integer authorShare;
+    private Long authorShare;
 
     @Column(name = "settlement_id")
     private UUID settlementId;
@@ -69,8 +69,8 @@ public class RevenueTransaction {
             UUID buyerUserId, UUID purchaseId,
             Integer creditAmount, Double platformFeeRate) {
 
-        int fee = (int) Math.round(creditAmount * platformFeeRate);
-        int share = creditAmount - fee;
+        long fee = Math.round(creditAmount * platformFeeRate);
+        long share = creditAmount - fee;
 
         return RevenueTransaction.builder()
                 .authorId(authorId)
@@ -79,7 +79,7 @@ public class RevenueTransaction {
                 .buyerUserId(buyerUserId)
                 .purchaseId(purchaseId)
                 .type(RevenueTransactionType.CHAPTER_SALE)
-                .creditAmount(creditAmount)
+                .creditAmount(creditAmount.longValue())
                 .platformFeeRate(platformFeeRate)
                 .platformFee(fee)
                 .authorShare(share)
@@ -91,8 +91,8 @@ public class RevenueTransaction {
             UUID buyerUserId, UUID purchaseId,
             Integer creditAmount, Double platformFeeRate) {
 
-        int fee = (int) Math.round(creditAmount * platformFeeRate);
-        int share = creditAmount - fee;
+        long fee = Math.round(creditAmount * platformFeeRate);
+        long share = creditAmount - fee;
 
         return RevenueTransaction.builder()
                 .authorId(authorId)
@@ -101,7 +101,7 @@ public class RevenueTransaction {
                 .buyerUserId(buyerUserId)
                 .purchaseId(purchaseId)
                 .type(RevenueTransactionType.REFUND)
-                .creditAmount(-creditAmount)
+                .creditAmount((long) -creditAmount)
                 .platformFeeRate(platformFeeRate)
                 .platformFee(-fee)
                 .authorShare(-share)
