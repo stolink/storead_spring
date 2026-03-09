@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StoRead — 작가 정산 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --serif:'Noto Serif KR',Georgia,'Times New Roman',serif;
+  --sans:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+
+  /* Light (warm parchment) */
+  --bg:#FAF6F0;--bg2:#F2EDE4;--bg3:#EAE3D8;
+  --surface:#FFFFFF;--surface-hover:#FDFCFA;
+  --ink:#1A1612;--ink2:#4A4540;--ink3:#8A8580;--ink4:#B5B0A8;
+  --border:#DDD8CE;--border2:#C8C2B6;
+  --accent:#B45309;--accent2:#D97706;--accent-bg:rgba(180,83,9,.06);
+  --green:#166534;--green-bg:rgba(22,101,52,.08);
+  --red:#991B1B;--red-bg:rgba(153,27,27,.08);
+  --blue:#1E40AF;--blue-bg:rgba(30,64,175,.08);
+  --yellow:#92400E;--yellow-bg:rgba(146,64,14,.08);
+  --shadow:0 1px 3px rgba(26,22,18,.06),0 6px 24px rgba(26,22,18,.04);
+  --shadow-lg:0 4px 12px rgba(26,22,18,.08),0 24px 48px rgba(26,22,18,.06);
+  --grain:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"]{
+  --bg:#111110;--bg2:#1A1918;--bg3:#232221;
+  --surface:#1E1D1C;--surface-hover:#252423;
+  --ink:#EDE8E0;--ink2:#B5B0A8;--ink3:#7A756D;--ink4:#4A4540;
+  --border:#2E2D2B;--border2:#3A3938;
+  --accent:#F59E0B;--accent2:#FBBF24;--accent-bg:rgba(245,158,11,.08);
+  --green:#4ADE80;--green-bg:rgba(74,222,128,.1);
+  --red:#F87171;--red-bg:rgba(248,113,113,.1);
+  --blue:#60A5FA;--blue-bg:rgba(96,165,250,.1);
+  --yellow:#FBBF24;--yellow-bg:rgba(251,191,36,.1);
+  --shadow:0 1px 3px rgba(0,0,0,.2),0 6px 24px rgba(0,0,0,.15);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.3),0 24px 48px rgba(0,0,0,.2);
+}
+
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  font-family:var(--sans);color:var(--ink);background:var(--bg);
+  line-height:1.6;min-height:100vh;
+  background-image:var(--grain);background-repeat:repeat;
+}
+
+/* ─── LAYOUT ─── */
+.dashboard{max-width:1200px;margin:0 auto;padding:2rem 1.5rem 4rem}
+
+/* ─── HEADER ─── */
+.header{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding-bottom:1.5rem;margin-bottom:2rem;
+  border-bottom:2px solid var(--ink);
+  flex-wrap:wrap;gap:1rem;
+}
+.header h1{
+  font-family:var(--serif);font-size:clamp(1.5rem,4vw,2.25rem);
+  font-weight:900;letter-spacing:-.02em;line-height:1.1;
+}
+.header h1 span{color:var(--accent);font-style:italic}
+.header-actions{display:flex;align-items:center;gap:.75rem}
+.theme-toggle{
+  width:40px;height:40px;border:1.5px solid var(--border2);border-radius:50%;
+  background:var(--surface);color:var(--ink);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;transition:all .2s;
+}
+.theme-toggle:hover{background:var(--bg2);border-color:var(--ink3)}
+
+/* ─── STAT CARDS ─── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2.5rem}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.5rem;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.stat-card:nth-child(1)::before{background:var(--accent)}
+.stat-card:nth-child(2)::before{background:var(--yellow,#92400E)}
+.stat-card:nth-child(3)::before{background:var(--green)}
+.stat-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;margin-bottom:.75rem;
+}
+.stat-card:nth-child(1) .stat-icon{background:var(--accent-bg);color:var(--accent)}
+.stat-card:nth-child(2) .stat-icon{background:var(--yellow-bg);color:var(--yellow)}
+.stat-card:nth-child(3) .stat-icon{background:var(--green-bg);color:var(--green)}
+.stat-label{font-size:.8rem;color:var(--ink3);font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.25rem}
+.stat-value{
+  font-family:var(--serif);font-size:clamp(1.5rem,3vw,2rem);
+  font-weight:700;letter-spacing:-.02em;line-height:1.2;
+}
+.stat-value .unit{font-size:.5em;color:var(--ink3);font-weight:400;margin-left:.15em}
+
+/* ─── SECTION ─── */
+.section{margin-bottom:2.5rem}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;
+}
+.section-title{
+  font-family:var(--serif);font-size:1.15rem;font-weight:700;
+  display:flex;align-items:center;gap:.5rem;
+}
+.section-title::before{
+  content:'';display:block;width:3px;height:1.1em;
+  background:var(--accent);border-radius:2px;
+}
+
+/* ─── BAR CHART ─── */
+.chart-container{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:1.5rem;box-shadow:var(--shadow);
+}
+.bar-chart{
+  display:flex;align-items:flex-end;gap:0;height:200px;
+  padding:0 .5rem;border-bottom:1px solid var(--border);
+}
+.bar-group{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:.5rem;position:relative;min-width:0;
+}
+.bar-wrapper{
+  width:100%;display:flex;justify-content:center;align-items:flex-end;
+  height:180px;position:relative;
+}
+.bar{
+  width:clamp(16px,60%,40px);border-radius:4px 4px 0 0;
+  background:linear-gradient(to top,var(--accent),var(--accent2));
+  transition:height .6s cubic-bezier(.4,0,.2,1);
+  position:relative;min-height:2px;
+}
+.bar:hover{opacity:.85}
+.bar-tooltip{
+  display:none;position:absolute;bottom:calc(100% + 6px);left:50%;
+  transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  font-size:.7rem;padding:.25rem .5rem;border-radius:4px;white-space:nowrap;
+  pointer-events:none;z-index:10;
+}
+.bar:hover .bar-tooltip{display:block}
+.bar-label{
+  font-size:.65rem;color:var(--ink3);text-align:center;
+  writing-mode:horizontal-tb;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:100%;
+  padding-top:.35rem;
+}
+
+/* ─── TABLE ─── */
+.table-container{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+thead{background:var(--bg2)}
+th{
+  font-weight:600;font-size:.75rem;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink3);
+  padding:.75rem 1rem;text-align:left;white-space:nowrap;
+  border-bottom:1px solid var(--border);
+}
+td{
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--surface-hover)}
+tbody tr:last-child td{border-bottom:none}
+
+/* Progress bar in table */
+.progress-cell{min-width:120px}
+.progress-bar{
+  height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;
+}
+.progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1);
+}
+
+/* ─── BADGES ─── */
+.badge{
+  display:inline-flex;align-items:center;gap:.3em;
+  padding:.2em .6em;border-radius:6px;font-size:.75rem;
+  font-weight:600;letter-spacing:.02em;white-space:nowrap;
+}
+.badge-sale{background:var(--green-bg);color:var(--green)}
+.badge-refund{background:var(--red-bg);color:var(--red)}
+.badge-pending{background:var(--yellow-bg);color:var(--yellow)}
+.badge-confirmed{background:var(--blue-bg);color:var(--blue)}
+.badge-processing{background:var(--blue-bg);color:var(--blue)}
+.badge-completed{background:var(--green-bg);color:var(--green)}
+.badge-failed{background:var(--red-bg);color:var(--red)}
+.badge-rejected{background:var(--red-bg);color:var(--red)}
+
+/* ─── BUTTONS ─── */
+.btn{
+  display:inline-flex;align-items:center;gap:.4em;
+  padding:.5rem 1rem;border-radius:8px;font-size:.8rem;
+  font-weight:600;cursor:pointer;border:1.5px solid transparent;
+  transition:all .2s;font-family:var(--sans);
+}
+.btn-primary{
+  background:var(--ink);color:var(--bg);border-color:var(--ink);
+}
+.btn-primary:hover{opacity:.85}
+.btn-confirm{background:var(--green-bg);color:var(--green);border-color:currentColor}
+.btn-confirm:hover{opacity:.75}
+.btn-reject{background:var(--red-bg);color:var(--red);border-color:currentColor}
+.btn-reject:hover{opacity:.75}
+.btn-sm{padding:.35rem .65rem;font-size:.72rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ─── MODAL ─── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  backdrop-filter:blur(4px);z-index:100;
+  align-items:center;justify-content:center;padding:1rem;
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--shadow-lg);
+  width:100%;max-width:440px;padding:2rem;
+  animation:modalIn .25s cubic-bezier(.4,0,.2,1);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.modal h2{font-family:var(--serif);font-size:1.15rem;margin-bottom:1.25rem}
+.modal label{display:block;font-size:.8rem;font-weight:600;color:var(--ink2);margin-bottom:.35rem}
+.modal input,.modal textarea{
+  width:100%;padding:.6rem .75rem;border:1.5px solid var(--border2);
+  border-radius:8px;font-size:.875rem;font-family:var(--sans);
+  background:var(--bg);color:var(--ink);
+  transition:border-color .2s;
+}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--accent)}
+.modal textarea{resize:vertical;min-height:80px}
+.form-group{margin-bottom:1rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem}
+
+/* ─── EMPTY STATE ─── */
+.empty{
+  text-align:center;padding:3rem 1rem;color:var(--ink3);
+}
+.empty-icon{font-size:2rem;margin-bottom:.5rem;opacity:.4}
+.empty p{font-size:.875rem}
+
+/* ─── LOADING ─── */
+.loading{
+  display:flex;align-items:center;justify-content:center;
+  padding:3rem;color:var(--ink3);gap:.5rem;
+}
+.spinner{
+  width:18px;height:18px;border:2px solid var(--border2);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── GRID LAYOUT ─── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+
+/* ─── TOAST ─── */
+.toast-container{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;
+  display:flex;flex-direction:column;gap:.5rem;
+}
+.toast{
+  background:var(--ink);color:var(--bg);
+  padding:.75rem 1.25rem;border-radius:10px;
+  font-size:.85rem;font-weight:500;
+  box-shadow:var(--shadow-lg);
+  animation:toastIn .3s cubic-bezier(.4,0,.2,1);
+}
+.toast.error{background:var(--red);color:#fff}
+.toast.success{background:var(--green);color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ─── ANIMATIONS ─── */
+.fade-in{animation:fadeIn .5s cubic-bezier(.4,0,.2,1) both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}
+.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}
+.stagger-5{animation-delay:.25s}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){
+  .two-col{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .dashboard{padding:1rem .75rem 3rem}
+  .header{flex-direction:column;align-items:flex-start}
+  .stat-card{padding:1.125rem}
+  .form-row{grid-template-columns:1fr}
+  .bar-chart{height:150px}
+  .bar-wrapper{height:130px}
+}
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+  <!-- HEADER -->
+  <header class="header fade-in">
+    <h1>정산 <span>대시보드</span></h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="openModal('settlement')">정산 요청</button>
+      <button class="theme-toggle" onclick="toggleTheme()" title="테마 전환" id="themeBtn">
+        <span id="themeIcon">&#9789;</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- STAT CARDS -->
+  <section class="stats" id="statsSection">
+    <div class="stat-card fade-in stagger-1">
+      <div class="stat-icon">&#9733;</div>
+      <div class="stat-label">누적 수익</div>
+      <div class="stat-value" id="totalEarned">—<span class="unit">크레딧</span></div>
+    </div>
+    <div class="stat-card fade-in stagger-2">
+      <div class="stat-icon">&#9203;</div>
+      <div class="stat-label">정산 대기</div>
+      <div class="stat-value" id="pendingBalance">—<span class="unit">크레딧</span></div>
+    </div>
+    <div class="stat-card fade-in stagger-3">
+      <div class="stat-icon">&#10003;</div>
+      <div class="stat-label">정산 완료</div>
+      <div class="stat-value" id="totalSettled">—<span class="unit">크레딧</span></div>
+    </div>
+  </section>
+
+  <!-- MONTHLY CHART + WORK TABLE -->
+  <div class="two-col">
+    <!-- Monthly Revenue Chart -->
+    <section class="section fade-in stagger-3">
+      <div class="section-header">
+        <div class="section-title">월별 수익 추이</div>
+      </div>
+      <div class="chart-container">
+        <div class="bar-chart" id="barChart">
+          <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Revenue by Work -->
+    <section class="section fade-in stagger-4">
+      <div class="section-header">
+        <div class="section-title">작품별 수익</div>
+      </div>
+      <div class="table-container">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>작품</th><th>수익</th><th>거래</th><th>비율</th></tr></thead>
+            <tbody id="workTable">
+              <tr><td colspan="4"><div class="loading"><div class="spinner"></div>불러오는 중...</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- RECENT TRANSACTIONS -->
+  <section class="section fade-in stagger-4">
+    <div class="section-header">
+      <div class="section-title">최근 거래 내역</div>
+    </div>
+    <div class="table-container">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>유형</th><th>크레딧</th><th>수수료</th><th>내 수익</th><th>일시</th></tr></thead>
+          <tbody id="txTable">
+            <tr><td colspan="5"><div class="loading"><div class="spinner"></div>불러오는 중...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTLEMENTS -->
+  <section class="section fade-in stagger-5">
+    <div class="section-header">
+      <div class="section-title">정산 내역</div>
+    </div>
+    <div class="table-container">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>기간</th><th>총액</th><th>수수료</th><th>정산액</th><th>건수</th><th>상태</th><th>작업</th></tr></thead>
+          <tbody id="settlementTable">
+            <tr><td colspan="7"><div class="loading"><div class="spinner"></div>불러오는 중...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- SETTLEMENT REQUEST MODAL -->
+<div class="modal-overlay" id="settlementModal">
+  <div class="modal">
+    <h2>정산 요청</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="periodStart">시작일</label>
+        <input type="date" id="periodStart">
+      </div>
+      <div class="form-group">
+        <label for="periodEnd">종료일</label>
+        <input type="date" id="periodEnd">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--bg2);color:var(--ink2)" onclick="closeModal('settlement')">취소</button>
+      <button class="btn btn-primary" onclick="requestSettlement()">요청하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <h2>정산 거절</h2>
+    <div class="form-group">
+      <label for="rejectReason">거절 사유</label>
+      <textarea id="rejectReason" placeholder="거절 사유를 입력해주세요..."></textarea>
+    </div>
+    <input type="hidden" id="rejectSettlementId">
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--bg2);color:var(--ink2)" onclick="closeModal('reject')">취소</button>
+      <button class="btn btn-reject" onclick="rejectSettlement()">거절하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API_BASE = '';
+
+/* ─── THEME ─── */
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('storead-theme', next);
+  document.getElementById('themeIcon').innerHTML = next === 'dark' ? '&#9788;' : '&#9789;';
+}
+(function initTheme() {
+  const saved = localStorage.getItem('storead-theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('themeIcon').innerHTML = saved === 'dark' ? '&#9788;' : '&#9789;';
+  }
+})();
+
+/* ─── MODAL ─── */
+function openModal(name) {
+  document.getElementById(name + 'Modal').classList.add('active');
+  if (name === 'settlement') {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    document.getElementById('periodStart').value = fmt(start);
+    document.getElementById('periodEnd').value = fmt(end);
+  }
+}
+function closeModal(name) { document.getElementById(name + 'Modal').classList.remove('active'); }
+
+/* ─── TOAST ─── */
+function showToast(msg, type = '') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+/* ─── HELPERS ─── */
+function fmt(d) { return d.toISOString().slice(0, 10); }
+function num(n) { return (n ?? 0).toLocaleString('ko-KR'); }
+function shortDate(s) { if (!s) return '—'; const d = new Date(s); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+const TYPE_LABELS = { CHAPTER_SALE: '판매', REFUND: '환불', ADJUSTMENT: '조정' };
+const STATUS_LABELS = { PENDING:'대기', CONFIRMED:'확인', PROCESSING:'처리중', COMPLETED:'완료', FAILED:'실패', REJECTED:'거절' };
+
+function typeBadge(type) {
+  const cls = type === 'CHAPTER_SALE' ? 'badge-sale' : type === 'REFUND' ? 'badge-refund' : 'badge-pending';
+  return `<span class="badge ${cls}">${TYPE_LABELS[type] || type}</span>`;
+}
+function statusBadge(status) {
+  const cls = 'badge-' + status.toLowerCase();
+  return `<span class="badge ${cls}">${STATUS_LABELS[status] || status}</span>`;
+}
+
+/* ─── API ─── */
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API_BASE + path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `요청 실패 (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data !== undefined ? json.data : json;
+}
+
+/* ─── LOAD DASHBOARD ─── */
+async function loadDashboard() {
+  try {
+    const data = await apiFetch('/api/settlement/dashboard');
+
+    document.getElementById('totalEarned').innerHTML = `${num(data.totalEarned)}<span class="unit">크레딧</span>`;
+    document.getElementById('pendingBalance').innerHTML = `${num(data.pendingBalance)}<span class="unit">크레딧</span>`;
+    document.getElementById('totalSettled').innerHTML = `${num(data.totalSettled)}<span class="unit">크레딧</span>`;
+
+    renderChart(data.revenueByMonth || []);
+    renderWorkTable(data.revenueByWork || []);
+    renderTxTable(data.recentTransactions || []);
+  } catch (e) {
+    console.warn('Dashboard load failed, showing demo data:', e.message);
+    loadDemoData();
+  }
+}
+
+function renderChart(months) {
+  const el = document.getElementById('barChart');
+  if (!months.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">&#128202;</div><p>아직 수익 데이터가 없습니다</p></div>'; return; }
+  const max = Math.max(...months.map(m => m.totalRevenue), 1);
+  el.innerHTML = months.slice().reverse().map(m => {
+    const pct = Math.max((m.totalRevenue / max) * 100, 1);
+    const label = m.month.slice(2).replace('-', '.');
+    return `<div class="bar-group">
+      <div class="bar-wrapper"><div class="bar" style="height:${pct}%"><div class="bar-tooltip">${num(m.totalRevenue)} 크레딧 · ${m.transactionCount}건</div></div></div>
+      <div class="bar-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderWorkTable(works) {
+  const el = document.getElementById('workTable');
+  if (!works.length) { el.innerHTML = '<tr><td colspan="4"><div class="empty"><div class="empty-icon">&#128218;</div><p>작품별 수익 데이터가 없습니다</p></div></td></tr>'; return; }
+  const max = Math.max(...works.map(w => w.totalRevenue), 1);
+  const sorted = [...works].sort((a, b) => b.totalRevenue - a.totalRevenue);
+  el.innerHTML = sorted.map(w => {
+    const pct = (w.totalRevenue / max) * 100;
+    return `<tr>
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${w.workTitle}">${w.workTitle}</td>
+      <td style="font-family:var(--serif);font-weight:700">${num(w.totalRevenue)}</td>
+      <td style="color:var(--ink3)">${w.transactionCount}건</td>
+      <td class="progress-cell"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTxTable(txs) {
+  const el = document.getElementById('txTable');
+  if (!txs.length) { el.innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty-icon">&#128196;</div><p>거래 내역이 없습니다</p></div></td></tr>'; return; }
+  el.innerHTML = txs.map(t => `<tr>
+    <td>${typeBadge(t.type)}</td>
+    <td style="font-family:var(--serif)">${num(t.creditAmount)}</td>
+    <td style="color:var(--ink3)">${num(t.platformFee)}</td>
+    <td style="font-family:var(--serif);font-weight:700;color:${t.authorShare >= 0 ? 'var(--green)' : 'var(--red)'}">${t.authorShare >= 0 ? '+' : ''}${num(t.authorShare)}</td>
+    <td style="color:var(--ink3);font-size:.8rem">${shortDate(t.createdAt)}</td>
+  </tr>`).join('');
+}
+
+/* ─── LOAD SETTLEMENTS ─── */
+async function loadSettlements() {
+  try {
+    const data = await apiFetch('/api/settlement/list?page=0&size=20');
+    renderSettlements(data.content || []);
+  } catch (e) {
+    console.warn('Settlements load failed, showing demo:', e.message);
+    renderSettlements(demoSettlements);
+  }
+}
+
+function renderSettlements(list) {
+  const el = document.getElementById('settlementTable');
+  if (!list.length) { el.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">&#128203;</div><p>정산 내역이 없습니다</p></div></td></tr>'; return; }
+  el.innerHTML = list.map(s => {
+    const actions = s.status === 'PENDING'
+      ? `<button class="btn btn-confirm btn-sm" onclick="confirmSettlement('${s.id}')">확인</button>
+         <button class="btn btn-reject btn-sm" onclick="openRejectModal('${s.id}')">거절</button>`
+      : '—';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:.82rem">${s.periodStart} ~ ${s.periodEnd}</td>
+      <td style="font-family:var(--serif)">${num(s.grossAmount)}</td>
+      <td style="color:var(--ink3)">${num(s.platformFeeTotal)}</td>
+      <td style="font-family:var(--serif);font-weight:700">${num(s.netAmount)}</td>
+      <td>${s.transactionCount}건</td>
+      <td>${statusBadge(s.status)}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── ACTIONS ─── */
+async function requestSettlement() {
+  const start = document.getElementById('periodStart').value;
+  const end = document.getElementById('periodEnd').value;
+  if (!start || !end) { showToast('기간을 선택해주세요', 'error'); return; }
+  if (start >= end) { showToast('시작일은 종료일보다 이전이어야 합니다', 'error'); return; }
+  try {
+    await apiFetch(`/api/settlement/request?periodStart=${start}&periodEnd=${end}`, { method: 'POST' });
+    showToast('정산 요청이 완료되었습니다', 'success');
+    closeModal('settlement');
+    loadSettlements();
+    loadDashboard();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function confirmSettlement(id) {
+  if (!confirm('이 정산을 확인하시겠습니까?')) return;
+  try {
+    await apiFetch(`/api/settlement/${id}/confirm`, { method: 'POST' });
+    showToast('정산이 확인되었습니다', 'success');
+    loadSettlements();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openRejectModal(id) {
+  document.getElementById('rejectSettlementId').value = id;
+  document.getElementById('rejectReason').value = '';
+  openModal('reject');
+}
+
+async function rejectSettlement() {
+  const id = document.getElementById('rejectSettlementId').value;
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { showToast('거절 사유를 입력해주세요', 'error'); return; }
+  try {
+    await apiFetch(`/api/settlement/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+    showToast('정산이 거절되었습니다', 'success');
+    closeModal('reject');
+    loadSettlements();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+/* ─── DEMO DATA (shown when API is unavailable) ─── */
+const demoSettlements = [
+  { id: 'demo-1', periodStart: '2026-01-01', periodEnd: '2026-02-01', grossAmount: 15200, platformFeeTotal: 4560, netAmount: 10640, transactionCount: 38, status: 'PENDING', confirmedAt: null, completedAt: null },
+  { id: 'demo-2', periodStart: '2025-12-01', periodEnd: '2026-01-01', grossAmount: 12800, platformFeeTotal: 3840, netAmount: 8960, transactionCount: 29, status: 'COMPLETED', confirmedAt: '2026-01-05T10:00:00', completedAt: '2026-01-07T14:30:00' },
+  { id: 'demo-3', periodStart: '2025-11-01', periodEnd: '2025-12-01', grossAmount: 9600, platformFeeTotal: 2880, netAmount: 6720, transactionCount: 21, status: 'COMPLETED', confirmedAt: '2025-12-04T09:00:00', completedAt: '2025-12-06T11:00:00' },
+];
+
+function loadDemoData() {
+  document.getElementById('totalEarned').innerHTML = `26,320<span class="unit">크레딧</span>`;
+  document.getElementById('pendingBalance').innerHTML = `10,640<span class="unit">크레딧</span>`;
+  document.getElementById('totalSettled').innerHTML = `15,680<span class="unit">크레딧</span>`;
+
+  renderChart([
+    { month: '2025-09', totalRevenue: 3200, transactionCount: 8 },
+    { month: '2025-10', totalRevenue: 5800, transactionCount: 14 },
+    { month: '2025-11', totalRevenue: 6720, transactionCount: 21 },
+    { month: '2025-12', totalRevenue: 8960, transactionCount: 29 },
+    { month: '2026-01', totalRevenue: 10640, transactionCount: 38 },
+    { month: '2026-02', totalRevenue: 7400, transactionCount: 24 },
+  ]);
+
+  renderWorkTable([
+    { workId: 'w1', workTitle: '달빛 아래 서약', totalRevenue: 12400, transactionCount: 45 },
+    { workId: 'w2', workTitle: '코드네임: 블랙아이스', totalRevenue: 8200, transactionCount: 28 },
+    { workId: 'w3', workTitle: '봄의 정원사', totalRevenue: 4100, transactionCount: 15 },
+    { workId: 'w4', workTitle: '시간의 미로', totalRevenue: 1620, transactionCount: 6 },
+  ]);
+
+  renderTxTable([
+    { id:'t1', type:'CHAPTER_SALE', creditAmount:300, platformFee:90, authorShare:210, createdAt:'2026-02-08T14:32:00' },
+    { id:'t2', type:'CHAPTER_SALE', creditAmount:200, platformFee:60, authorShare:140, createdAt:'2026-02-08T11:15:00' },
+    { id:'t3', type:'REFUND', creditAmount:-300, platformFee:-90, authorShare:-210, createdAt:'2026-02-07T18:40:00' },
+    { id:'t4', type:'CHAPTER_SALE', creditAmount:500, platformFee:150, authorShare:350, createdAt:'2026-02-07T09:22:00' },
+    { id:'t5', type:'CHAPTER_SALE', creditAmount:200, platformFee:60, authorShare:140, createdAt:'2026-02-06T16:55:00' },
+  ]);
+
+  renderSettlements(demoSettlements);
+}
+
+/* ─── INIT ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  loadSettlements();
+});
+
+/* Close modal on overlay click */
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+});
+</script>
+</body>
+</html>

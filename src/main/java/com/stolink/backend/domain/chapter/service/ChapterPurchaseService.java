@@ -9,8 +9,10 @@ import com.stolink.backend.domain.payment.dto.request.CreditUseRequest;
 import com.stolink.backend.domain.payment.dto.response.CreditCheckResponse;
 import com.stolink.backend.domain.payment.dto.response.CreditResponse;
 import com.stolink.backend.domain.payment.service.CreditService;
+import com.stolink.backend.domain.settlement.service.RevenueService;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +20,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChapterPurchaseService {
 
     private final ChapterPurchaseRepository chapterPurchaseRepository;
     private final ChapterRepository chapterRepository;
     private final CreditService creditService;
+    private final RevenueService revenueService;
 
     /**
      * 챕터 구매 가능 여부 확인
@@ -100,6 +104,9 @@ public class ChapterPurchaseService {
                 "CHAPTER",
                 chapterId.toString());
         creditService.useCredit(userId, useRequest);
+
+        // 5. 작가 수익 기록 (실패 시 전체 트랜잭션 롤백)
+        revenueService.recordChapterSaleRevenue(purchase);
     }
 
     /**
