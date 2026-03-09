@@ -10,6 +10,7 @@ import com.stolink.backend.domain.payment.dto.request.CreditUseRequest;
 import com.stolink.backend.domain.payment.dto.response.CreditCheckResponse;
 import com.stolink.backend.domain.payment.dto.response.CreditResponse;
 import com.stolink.backend.domain.payment.service.CreditService;
+import com.stolink.backend.domain.settlement.service.RevenueService;
 import com.stolink.backend.global.common.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +45,9 @@ class ChapterPurchaseServiceTest {
 
     @Mock
     private CreditService creditService;
+
+    @Mock
+    private RevenueService revenueService;
 
     private Chapter createFreeChapter() {
         Chapter chapter = Chapter.builder()
